@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<!--
+  SPDX-FileCopyrightText: 2026 Kevin Sträßler
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	  xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>user_lockdown</id>
+	<name>User Lockdown</name>
+	<summary>Restrict selected users to read-only file access</summary>
+	<summary lang="de">Beschränke ausgewählte Benutzer auf schreibgeschützten Dateizugriff</summary>
+	<description>Restrict selected users to viewing and downloading existing files while administrators retain full control.</description>
+	<description lang="de">Beschränke ausgewählte Benutzer auf das Anzeigen und Herunterladen vorhandener Dateien, während Administratoren die vollständige Kontrolle behalten.</description>
+	<version>1.0.0</version>
+	<licence>AGPL-3.0-or-later</licence>
+	<author>Kevin Sträßler</author>
+	<namespace>UserLockdown</namespace>
+	<documentation>
+		<admin>https://github.com/RentnerKev/UserLockdown#administration</admin>
+	</documentation>
+	<category>security</category>
+	<website>https://github.com/RentnerKev/UserLockdown</website>
+	<bugs>https://github.com/RentnerKev/UserLockdown/issues</bugs>
+	<repository>https://github.com/RentnerKev/UserLockdown</repository>
+	<dependencies>
+		<php min-version="8.2" max-version="8.5" />
+		<nextcloud min-version="32" max-version="34" />
+	</dependencies>
+	<settings>
+		<admin>OCA\UserLockdown\Settings\Admin</admin>
+		<admin-section>OCA\UserLockdown\Settings\AdminSection</admin-section>
+	</settings>
+</info>
