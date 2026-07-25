@@ -1,0 +1,12 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error"
+  },
+  "plugins": ["typescript", "react", "react-hooks", "jsx-a11y"],
+  "rules": {
+    "typescript/no-explicit-any": "error",
+    "react/jsx-no-useless-fragment": "warn"
+  }
+}

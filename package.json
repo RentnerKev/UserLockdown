@@ -1,0 +1,46 @@
+{
+  "name": "user-lockdown",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently --kill-others-on-fail \"vite build --watch --mode admin\" \"vite build --watch --mode files\"",
+    "build": "vite build --mode admin && vite build --mode files",
+    "typecheck": "tsc -b --pretty false",
+    "lint": "oxlint --deny-warnings src tests/frontend vite.config.ts vitest.config.ts",
+    "format": "oxfmt --config oxfmt.json src tests/frontend vite.config.ts vitest.config.ts package.json tsconfig.json tsconfig.app.json tsconfig.node.json oxlint.json oxfmt.json",
+    "format:check": "oxfmt --config oxfmt.json --check src tests/frontend vite.config.ts vitest.config.ts package.json tsconfig.json tsconfig.app.json tsconfig.node.json oxlint.json oxfmt.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@nextcloud/axios": "^2.5.0",
+    "@nextcloud/initial-state": "^2.1.0",
+    "@nextcloud/l10n": "^3.3.0",
+    "@nextcloud/router": "^3.0.1",
+    "@tanstack/react-query": "^5.83.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "zod": "^4.0.10"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.4",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^24.1.0",
+    "@types/react": "^19.1.9",
+    "@types/react-dom": "^19.1.7",
+    "@vitejs/plugin-react": "^4.7.0",
+    "concurrently": "^9.2.1",
+    "jsdom": "^26.1.0",
+    "oxfmt": "^0.17.0",
+    "oxlint": "^1.8.0",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.6",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "bun": ">=1.2.0"
+  },
+  "packageManager": "bun@1.2.19"
+}

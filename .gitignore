@@ -1,0 +1,15 @@
+/.env
+/.env.*
+/.idea/
+/.php-cs-fixer.cache
+/.vscode/
+/appinfo/signature.json
+/build/
+/coverage/
+/node_modules/
+/vendor/
+*.key
+*.pem
+*.tsbuildinfo
+css/*.map
+js/*.map

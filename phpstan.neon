@@ -1,0 +1,15 @@
+includes:
+    - vendor/phpstan/phpstan-phpunit/extension.neon
+
+parameters:
+    level: 8
+    paths:
+        - lib
+        - tests/Unit
+    scanFiles:
+        - stubs/NextcloudAppEvents.php
+    excludePaths:
+        analyse:
+            - stubs
+    tmpDir: build/phpstan
+    treatPhpDocTypesAsCertain: false

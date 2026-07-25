@@ -1,0 +1,47 @@
+* text=auto
+
+*.js text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.php text eol=lf
+*.sh text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.xml text eol=lf
+*.yml text eol=lf
+Makefile text eol=lf
+
+/css/*.css linguist-generated=true
+/js/*.js linguist-generated=true whitespace=-blank-at-eol
+
+*.png binary
+*.tar.gz binary
+
+/.dockerignore export-ignore
+/.editorconfig export-ignore
+/.gitattributes export-ignore
+/.github export-ignore
+/.gitignore export-ignore
+/.php-cs-fixer.dist.php export-ignore
+/Makefile export-ignore
+/build export-ignore
+/composer.json export-ignore
+/composer.lock export-ignore
+/docker export-ignore
+/docker-compose.yml export-ignore
+/node_modules export-ignore
+/oxfmt.json export-ignore
+/oxlint.json export-ignore
+/package.json export-ignore
+/phpstan.neon export-ignore
+/phpunit.xml export-ignore
+/scripts export-ignore
+/src export-ignore
+/stubs export-ignore
+/tests export-ignore
+/tsconfig.app.json export-ignore
+/tsconfig.json export-ignore
+/tsconfig.node.json export-ignore
+/vendor export-ignore
+/vite.config.ts export-ignore
+/vitest.config.ts export-ignore

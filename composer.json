@@ -1,0 +1,56 @@
+{
+    "name": "kevin-straessler/user_lockdown",
+    "description": "Restrict selected Nextcloud users to viewing and downloading existing files.",
+    "type": "nextcloud-app",
+    "license": "AGPL-3.0-or-later",
+    "authors": [
+        {
+            "name": "Kevin Sträßler"
+        }
+    ],
+    "require": {
+        "php": ">=8.2 <8.6"
+    },
+    "require-dev": {
+        "doctrine/dbal": "^4.3",
+        "nextcloud/coding-standard": "^1.5",
+        "nextcloud/ocp": "^34.0",
+        "phpstan/phpstan": "^2.1",
+        "phpstan/phpstan-phpunit": "^2.0",
+        "phpunit/phpunit": "^11.5",
+        "sabre/dav": "^4.7"
+    },
+    "autoload": {
+        "psr-4": {
+            "OCA\\UserLockdown\\": "lib/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "NCU\\": "vendor/nextcloud/ocp/NCU/",
+            "OCP\\": "vendor/nextcloud/ocp/OCP/",
+            "OCA\\UserLockdown\\Tests\\": "tests/"
+        },
+        "files": [
+            "stubs/NextcloudAppEvents.php"
+        ]
+    },
+    "scripts": {
+        "test": "phpunit",
+        "phpstan": "phpstan analyse --no-progress",
+        "cs:check": "php-cs-fixer fix --dry-run --diff --show-progress=none",
+        "cs:fix": "php-cs-fixer fix --show-progress=none",
+        "check": [
+            "@cs:check",
+            "@phpstan",
+            "@test"
+        ]
+    },
+    "config": {
+        "allow-plugins": {
+            "phpstan/extension-installer": true
+        },
+        "optimize-autoloader": true,
+        "sort-packages": true
+    }
+}
