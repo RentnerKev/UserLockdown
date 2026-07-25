@@ -1,0 +1,93 @@
+name: Build, sign, and publish release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+env:
+  APP_ID: user_lockdown
+  NEXTCLOUD_IMAGE: nextcloud:34-apache
+
+jobs:
+  publish:
+    environment: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2.37.1
+        with:
+          php-version: '8.5'
+          coverage: none
+          tools: composer:v2
+      - run: bun install --frozen-lockfile
+      - run: composer install --no-interaction --prefer-dist
+      - run: make check
+      - run: git diff --exit-code -- css js
+      - run: test -z "$(git status --porcelain --untracked-files=all -- css js)"
+      - name: Verify release version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: php scripts/check-release-version.php "$RELEASE_TAG"
+      - run: bash ./scripts/package.sh --stage-only
+      - name: Start signing server
+        run: docker compose up -d --wait --wait-timeout 600 db redis nextcloud
+      - name: Materialize signing secrets
+        env:
+          PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
+          PUBLIC_CERTIFICATE: ${{ secrets.APP_PUBLIC_CRT }}
+        run: |
+          test -n "$PRIVATE_KEY"
+          test -n "$PUBLIC_CERTIFICATE"
+          mkdir -p build/signing
+          printf '%s' "$PRIVATE_KEY" > build/signing/user_lockdown.key
+          printf '%s' "$PUBLIC_CERTIFICATE" > build/signing/user_lockdown.crt
+          chmod 600 build/signing/user_lockdown.key
+          sudo chown -R 33:33 build/signing build/appstore
+      - name: Sign staged production files
+        run: |
+          docker compose exec -T --user www-data nextcloud php occ integrity:sign-app \
+            --privateKey=/var/www/html/custom_apps/user_lockdown/build/signing/user_lockdown.key \
+            --certificate=/var/www/html/custom_apps/user_lockdown/build/signing/user_lockdown.crt \
+            --path=/var/www/html/custom_apps/user_lockdown/build/appstore/user_lockdown
+          sudo chown -R "$(id -u):$(id -g)" build/appstore
+      - name: Archive signed application
+        env:
+          REQUIRE_SIGNATURE: '1'
+        run: |
+          SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
+          export SOURCE_DATE_EPOCH
+          bash ./scripts/package.sh --archive-staged
+          cd build
+          sha256sum -c user_lockdown.tar.gz.sha256
+      - name: Upload immutable release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          gh release upload "$RELEASE_TAG" \
+            build/user_lockdown.tar.gz \
+            build/user_lockdown.tar.gz.sha256 \
+            --clobber
+      - name: Publish to Nextcloud App Store
+        uses: R0Wi/nextcloud-appstore-push-action@ad2020a77eb694e8fe145d2ebd6bc21c246240fd # v1.0.5
+        with:
+          app_name: user_lockdown
+          appstore_token: ${{ secrets.APPSTORE_TOKEN }}
+          download_url: https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/user_lockdown.tar.gz
+          app_private_key: ${{ secrets.APP_PRIVATE_KEY }}
+          nightly: false
+      - if: always()
+        name: Remove signing material
+        run: |
+          sudo chown -R "$(id -u):$(id -g)" build/appstore 2>/dev/null || true
+          sudo rm -f build/signing/user_lockdown.key build/signing/user_lockdown.crt
+          rm -f "$GITHUB_WORKSPACE/user_lockdown.key" "$GITHUB_WORKSPACE/user_lockdown.crt"
+          docker compose down --volumes
