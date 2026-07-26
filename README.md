@@ -157,18 +157,34 @@ The archive always has the required top-level `user_lockdown/` directory. App
 Store releases are signed with the certificate issued for the `user_lockdown`
 app ID.
 
-Publishing a GitHub release starts two independent workflows:
+For every update:
 
-- [`release.yml`](.github/workflows/release.yml) verifies, builds, signs, and
-  attaches the app archive before publishing it to the Nextcloud App Store.
-- [`changelog.yml`](.github/workflows/changelog.yml) groups Conventional Commits
-  into polished release notes and applies the matching RentnerKev stable or
-  development banner.
+1. Increase the version in `appinfo/info.xml` and `package.json` to the same,
+   higher semantic version.
+2. Commit and push the release-ready state.
+3. Create a GitHub release for the matching `v<SemVer>` tag, such as `v1.0.1`,
+   and press **Publish release**.
 
-The signed release workflow requires `APP_PRIVATE_KEY`, `APP_PUBLIC_CRT`, and
-`APPSTORE_TOKEN` in the protected GitHub environment named `release`. The
-changelog workflow uses only GitHub's automatically provided token and does not
-receive any signing secrets.
+[`release.yml`](.github/workflows/release.yml) then runs the complete CI suite,
+verifies the tag and version order, builds the app, signs every packaged file,
+creates the deterministic archive and checksum, uploads both GitHub assets, and
+publishes stable releases to the Nextcloud App Store. Only after that succeeds,
+[`changelog.yml`](.github/workflows/changelog.yml) generates the Conventional
+Commit release notes and applies the matching RentnerKev banner. GitHub
+pre-releases receive a signed archive and development notes but are deliberately
+not submitted as stable App Store releases.
+
+The `release` GitHub environment must contain `APP_PRIVATE_KEY`,
+`APP_PUBLIC_CRT`, and `APPSTORE_TOKEN`. The changelog workflow receives none of
+these secrets. Reuse the same private key and certificate for every version;
+the workflow creates a fresh file signature for each archive. Protect the
+default branch and restrict release creation to trusted maintainers; the
+workflow refuses to sign tags whose commit is not part of that branch. If one
+trusted maintainer controls releases, required environment reviewers can remain
+disabled for a literal one-click release. Otherwise, enable reviewers and accept
+the deliberate approval step. GitHub's immutable releases must remain disabled
+because the workflow attaches the signed artifacts and generated notes
+immediately after publication.
 
 ## Project links
 
