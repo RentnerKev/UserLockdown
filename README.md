@@ -1,11 +1,75 @@
-# User Lockdown
+<p align="center">
+  <img
+    src=".github/assets/readme/user-lockdown-hero.png"
+    alt="User Lockdown — read-only security for Nextcloud by RentnerKev"
+    width="100%"
+  >
+</p>
+
+<h1 align="center">User Lockdown</h1>
+
+<p align="center">
+  <strong>Server-enforced read-only access for selected Nextcloud users.</strong>
+</p>
+
+<p align="center">
+  <a href="https://github.com/RentnerKev/UserLockdown/actions/workflows/ci.yml"><img src="https://github.com/RentnerKev/UserLockdown/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <img src="https://img.shields.io/badge/Nextcloud-32--34-0082C9?logo=nextcloud&logoColor=white" alt="Nextcloud 32 to 34">
+  <img src="https://img.shields.io/badge/PHP-8.2--8.5-777BB4?logo=php&logoColor=white" alt="PHP 8.2 to 8.5">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0--or--later-663399" alt="AGPL 3.0 or later"></a>
+</p>
 
 User Lockdown is a Nextcloud security app that places selected, non-admin users
 into a deliberately narrow read-only mode. Restricted users can sign in, sign
 out, browse existing files, preview them, and download them. Administrators keep
-full control and manage the restricted-user list in the administration settings.
+full control and manage the restricted-user list centrally.
 
 Version 1.0.0 supports Nextcloud 32–34 and PHP 8.2–8.5.
+
+## See it in action
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src=".github/assets/readme/admin-management.jpg" alt="User Lockdown administration overview" width="100%">
+      <br>
+      <strong>Central administration</strong><br>
+      <sub>Review restricted users and remove restrictions from one focused settings page.</sub>
+    </td>
+    <td width="50%" valign="top">
+      <img src=".github/assets/readme/admin-search.jpg" alt="User Lockdown user search" width="100%">
+      <br>
+      <strong>Fast user search</strong><br>
+      <sub>Find non-admin accounts by display name or user ID and restrict them immediately.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src=".github/assets/readme/restricted-files.jpg" alt="Restricted Nextcloud Files interface" width="100%">
+      <br>
+      <strong>Clean restricted Files view</strong><br>
+      <sub>Viewing, previewing, and downloading remain available without intrusive warning panels.</sub>
+    </td>
+    <td width="50%" valign="top">
+      <img src=".github/assets/readme/logout-menu.jpg" alt="Restricted user logout menu" width="100%">
+      <br>
+      <strong>Minimal account menu</strong><br>
+      <sub>Restricted sessions expose only the action the user still needs: signing out.</sub>
+    </td>
+  </tr>
+</table>
+
+## Highlights
+
+- Central restriction management in the Nextcloud administration settings.
+- Read, preview, and download access without upload, edit, share, rename, or
+  delete permissions.
+- Server-side enforcement across WebDAV, AppFramework controllers, shares,
+  password actions, and file mutation events.
+- A normal-looking Files interface with write controls removed and no recurring
+  read-only notification noise.
+- Deterministic, signed release archives with automated GitHub and Nextcloud App
+  Store publishing.
 
 ## Security boundary
 
@@ -81,8 +145,8 @@ after the development stack has started.
 
 ## Release
 
-`scripts/package.sh` and `scripts/package.ps1` build a release containing only
-runtime assets and documentation. The result is:
+`scripts/package.sh` and `scripts/package.ps1` build a deterministic release
+containing only production files. The result is:
 
 ```text
 build/user_lockdown.tar.gz
@@ -90,10 +154,21 @@ build/user_lockdown.tar.gz.sha256
 ```
 
 The archive always has the required top-level `user_lockdown/` directory. App
-Store releases must additionally be signed with the certificate issued for the
-`user_lockdown` app ID. Publishing a GitHub release triggers the signed release
-workflow after the `APP_PRIVATE_KEY`, `APP_PUBLIC_CRT`, and `APPSTORE_TOKEN`
-secrets have been configured in the protected `release` environment.
+Store releases are signed with the certificate issued for the `user_lockdown`
+app ID.
+
+Publishing a GitHub release starts two independent workflows:
+
+- [`release.yml`](.github/workflows/release.yml) verifies, builds, signs, and
+  attaches the app archive before publishing it to the Nextcloud App Store.
+- [`changelog.yml`](.github/workflows/changelog.yml) groups Conventional Commits
+  into polished release notes and applies the matching RentnerKev stable or
+  development banner.
+
+The signed release workflow requires `APP_PRIVATE_KEY`, `APP_PUBLIC_CRT`, and
+`APPSTORE_TOKEN` in the protected GitHub environment named `release`. The
+changelog workflow uses only GitHub's automatically provided token and does not
+receive any signing secrets.
 
 ## Project links
 

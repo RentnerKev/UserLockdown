@@ -1,0 +1,232 @@
+name: Publish release changelog
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: changelog-${{ github.event.release.tag_name }}
+  cancel-in-progress: true
+
+env:
+  GIT_CLIFF_VERSION: 2.13.1
+  GIT_CLIFF_LINUX_AMD64_SHA256: 9a1263f24e59a2f508c7b3d3283c9dea94a8bf697f96dbc18cc783cac6284546
+
+jobs:
+  release-notes:
+    name: Publish release notes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: Resolve release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          node <<'NODE'
+          const fs = require('node:fs')
+
+          const eventPath = process.env.GITHUB_EVENT_PATH
+          const environmentPath = process.env.GITHUB_ENV
+
+          if (!eventPath || !environmentPath) {
+            throw new Error('GitHub release event paths are unavailable')
+          }
+
+          const event = JSON.parse(fs.readFileSync(eventPath, 'utf8'))
+          const release = event.release
+          const releaseTag = release?.tag_name
+          const publishedAt = release?.published_at
+
+          if (
+            typeof releaseTag !== 'string' ||
+            releaseTag.length === 0 ||
+            /[\r\n]/.test(releaseTag)
+          ) {
+            throw new Error('Release event contains no valid tag name')
+          }
+
+          if (typeof release?.prerelease !== 'boolean') {
+            throw new Error('Release event contains no valid prerelease state')
+          }
+
+          if (
+            typeof publishedAt !== 'string' ||
+            Number.isNaN(Date.parse(publishedAt))
+          ) {
+            throw new Error('Release event contains no valid publication date')
+          }
+
+          const publishedDate = new Intl.DateTimeFormat('en-GB', {
+            day: 'numeric',
+            month: 'long',
+            timeZone: 'UTC',
+            year: 'numeric',
+          }).format(new Date(publishedAt))
+
+          fs.appendFileSync(
+            environmentPath,
+            [
+              `RELEASE_TAG=${releaseTag}`,
+              `RELEASE_PRERELEASE=${release.prerelease}`,
+              `RELEASE_PUBLISHED_DATE=${publishedDate}`,
+              '',
+            ].join('\n'),
+          )
+          NODE
+
+      - name: Checkout release tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          release_ref="refs/tags/${RELEASE_TAG}"
+          git check-ref-format "${release_ref}"
+
+          if ! git show-ref --verify --quiet "${release_ref}"; then
+            printf 'Release tag %s was not fetched.\n' "${RELEASE_TAG}" >&2
+            exit 1
+          fi
+
+          release_commit="$(git rev-parse --verify "${release_ref}^{commit}")"
+          git checkout --detach "${release_commit}"
+
+          if [[ "$(git rev-parse HEAD)" != "${release_commit}" ]]; then
+            printf 'HEAD does not match release tag %s.\n' "${RELEASE_TAG}" >&2
+            exit 1
+          fi
+
+          if ! git tag --points-at HEAD |
+            grep --fixed-strings --line-regexp --quiet -- "${RELEASE_TAG}"; then
+            printf 'Release tag %s does not point at HEAD.\n' "${RELEASE_TAG}" >&2
+            exit 1
+          fi
+
+      - name: Install git-cliff
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          temporary_directory="$(mktemp -d)"
+          archive_name="git-cliff-${GIT_CLIFF_VERSION}-x86_64-unknown-linux-gnu.tar.gz"
+          archive_path="${temporary_directory}/${archive_name}"
+          install_directory="${temporary_directory}/bin"
+
+          curl --fail --silent --show-error --location \
+            --retry 3 \
+            --retry-all-errors \
+            "https://github.com/orhun/git-cliff/releases/download/v${GIT_CLIFF_VERSION}/${archive_name}" \
+            --output "${archive_path}"
+
+          printf '%s  %s\n' \
+            "${GIT_CLIFF_LINUX_AMD64_SHA256}" \
+            "${archive_path}" |
+            sha256sum --check --strict -
+
+          mkdir -p "${install_directory}"
+          tar -xzf "${archive_path}" \
+            --strip-components=1 \
+            --directory "${install_directory}" \
+            "git-cliff-${GIT_CLIFF_VERSION}/git-cliff"
+          chmod 0755 "${install_directory}/git-cliff"
+          printf '%s\n' "${install_directory}" >> "${GITHUB_PATH}"
+
+      - name: Generate changelog
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          release_commit="$(git rev-parse --verify "${RELEASE_TAG}^{commit}")"
+          previous_tag=''
+
+          mapfile -t collocated_tags < <(git tag --points-at "${release_commit}")
+          for tag in "${collocated_tags[@]}"; do
+            if [[ "${tag}" != "${RELEASE_TAG}" ]]; then
+              printf 'Ignoring collocated tag %s for release %s.\n' \
+                "${tag}" "${RELEASE_TAG}"
+              git tag --delete "${tag}" >/dev/null
+            fi
+          done
+
+          if git rev-parse --verify --quiet "${release_commit}^" >/dev/null; then
+            previous_tag="$(
+              git describe \
+                --tags \
+                --abbrev=0 \
+                "${release_commit}^" 2>/dev/null || true
+            )"
+          fi
+
+          if [[ -n "${previous_tag}" ]]; then
+            commit_range="${previous_tag}..${RELEASE_TAG}"
+            printf 'Generating changelog for %s (%s).\n' \
+              "${RELEASE_TAG}" "${commit_range}"
+          else
+            commit_range="${RELEASE_TAG}"
+            printf 'Generating initial changelog for %s.\n' "${RELEASE_TAG}"
+          fi
+
+          git-cliff \
+            --config cliff.toml \
+            --github-repo "${GITHUB_REPOSITORY}" \
+            --offline \
+            --tag "${RELEASE_TAG}" \
+            --no-exec \
+            --output release-notes.md \
+            -- "${commit_range}"
+
+      - name: Apply release design
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${RELEASE_PRERELEASE}" == 'true' ]]; then
+            banner_path='.github/assets/release-banners/dev-release-banner.png'
+            banner_alt='User Lockdown Dev Release'
+            release_heading='New Dev Release'
+            release_icon='🧪'
+            release_label='Pre-Release'
+            release_note='Built for testing and early feedback. Not intended for production use.'
+          else
+            banner_path='.github/assets/release-banners/new-release-banner.png'
+            banner_alt='User Lockdown New Release'
+            release_heading='New Release'
+            release_icon='🚀'
+            release_label='Stable Release'
+            release_note='Production-ready and available now.'
+          fi
+
+          cp "${banner_path}" release-banner.png
+          gh release upload "${RELEASE_TAG}" release-banner.png --clobber
+
+          banner_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/release-banner.png"
+
+          {
+            printf '![%s](%s)\n\n' "${banner_alt}" "${banner_url}"
+            printf '# %s %s · `%s`\n\n' \
+              "${release_icon}" \
+              "${release_heading}" \
+              "${RELEASE_TAG}"
+            printf '> **%s** · Published on **%s**  \n' \
+              "${release_label}" \
+              "${RELEASE_PUBLISHED_DATE}"
+            printf '> %s\n\n' "${release_note}"
+            printf '%s\n\n' '---'
+            cat release-notes.md
+          } > release-notes-with-banner.md
+
+          gh release edit "${RELEASE_TAG}" \
+            --notes-file release-notes-with-banner.md

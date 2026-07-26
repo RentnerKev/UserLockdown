@@ -1,0 +1,52 @@
+[changelog]
+header = ""
+body = """
+## Changelog
+
+{% if previous.version -%}
+[{{ previous.version }}...{{ version }}](https://github.com/{{ remote.github.owner }}/{{ remote.github.repo }}/compare/{{ previous.version }}...{{ version }})
+
+{% endif -%}
+{% set breaking_changes = commits | filter(attribute="breaking", value=true) -%}
+{% if breaking_changes | length > 0 -%}
+### 💥 Breaking Changes
+{% for commit in breaking_changes -%}
+- {% if commit.scope %}**{{ commit.scope }}:** {% endif %}{{ commit.message }} ([{{ commit.id | truncate(length=7, end="") }}](https://github.com/{{ remote.github.owner }}/{{ remote.github.repo }}/commit/{{ commit.id }}))
+{% endfor %}
+{% endif -%}
+{% if commits | length == 0 -%}
+Keine Conventional Commits für dieses Release gefunden.
+
+{% endif -%}
+{% for group, commits in commits | group_by(attribute="group") -%}
+### {{ group | split(pat="-->") | last | trim }}
+{% for commit in commits -%}
+- {% if commit.scope %}**{{ commit.scope }}:** {% endif %}{{ commit.message }} ([{{ commit.id | truncate(length=7, end="") }}](https://github.com/{{ remote.github.owner }}/{{ remote.github.repo }}/commit/{{ commit.id }}))
+{% endfor %}
+{% endfor %}
+"""
+footer = ""
+trim = true
+render_always = true
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+split_commits = false
+commit_parsers = [
+  { message = "^chore\\(release\\):", skip = true },
+  { message = "^feat", group = "<!-- 01 -->🌟 Features" },
+  { message = "^fix", group = "<!-- 02 -->🐛 Fixes" },
+  { message = "^perf", group = "<!-- 03 -->⚡ Performance" },
+  { message = "^refactor", group = "<!-- 04 -->♻️ Refactoring" },
+  { message = "^build", group = "<!-- 05 -->📦 Build" },
+  { message = "^ci", group = "<!-- 06 -->🤖 CI" },
+  { message = "^docs", group = "<!-- 07 -->📝 Docs" },
+  { message = "^style", group = "<!-- 08 -->🎨 Style" },
+  { message = "^test", group = "<!-- 09 -->✅ Tests" },
+  { message = "^chore", group = "<!-- 10 -->🧹 Chores" },
+  { message = "^revert", group = "<!-- 11 -->⏪ Reverts" },
+  { message = ".*", group = "<!-- 99 -->Sonstiges" },
+]
+filter_commits = false
+sort_commits = "newest"
