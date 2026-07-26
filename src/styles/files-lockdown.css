@@ -31,24 +31,6 @@
   display: none !important;
 }
 
-.user-lockdown-blocked-banner {
-  position: relative;
-  z-index: 10;
-  margin: 12px;
-  padding: 12px 16px;
-  border: 1px solid var(--color-warning, #c77c00);
-  border-inline-start-width: 5px;
-  border-radius: var(--border-radius-large, 10px);
-  background: color-mix(
-    in srgb,
-    var(--color-warning, #e9a825) 14%,
-    var(--color-main-background, #fff)
-  );
-  color: var(--color-main-text, #222);
-  font-weight: 600;
-}
-
-.user-lockdown-blocked-banner:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--color-primary-element, #00679e) 50%, transparent);
-  outline-offset: 2px;
+.user-lockdown-restricted #header-menu-user-menu .header-menu__content {
+  min-height: 0 !important;
 }

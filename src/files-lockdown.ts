@@ -2,6 +2,9 @@ import { translate as t } from '@nextcloud/l10n'
 
 import './styles/files-lockdown.css'
 
+const textReadOnlyNotification =
+  'Your editing permissions have been revoked. The document is now read-only.'
+
 const blockedControlSelectors = [
   '[data-cy-upload-picker]',
   '[data-cy-upload-picker-input]',
@@ -25,6 +28,7 @@ const blockedControlSelectors = [
   '[data-action="copy"]',
   '[data-action="share"]',
   '[data-action="favorite"]',
+  '#header-menu-user-menu a:not([href*="/logout"])',
   '#header-menu-user-menu button',
   '#notifications',
   '#contactsmenu',
@@ -41,54 +45,37 @@ const blockedControlSelectors = [
 
 const hideBlockedControls = (root: ParentNode): void => {
   root.querySelectorAll(blockedControlSelectors).forEach((element) => {
-    if (element instanceof HTMLElement) {
+    const target = element.closest('#header-menu-user-menu li') ?? element
+    if (target instanceof HTMLElement) {
+      target.hidden = true
+      target.setAttribute('data-user-lockdown-hidden', 'true')
+    }
+  })
+}
+
+const normalizeText = (value: string): string => value.replace(/\s+/g, ' ').trim()
+
+const hideReadOnlyNotifications = (root: ParentNode): void => {
+  const messages = new Set([
+    normalizeText(textReadOnlyNotification),
+    normalizeText(t('text', textReadOnlyNotification)),
+  ])
+
+  root.querySelectorAll('.toastify').forEach((element) => {
+    if (
+      element instanceof HTMLElement &&
+      [...messages].some((message) => normalizeText(element.textContent ?? '').includes(message))
+    ) {
       element.hidden = true
       element.setAttribute('data-user-lockdown-hidden', 'true')
     }
   })
 }
 
-const showRestrictionBanner = (): void => {
-  const currentUrl = new URL(window.location.href)
-  const blockedAction = currentUrl.searchParams.get('user_lockdown') === 'blocked'
-
-  if (document.getElementById('user-lockdown-blocked-banner') !== null) {
-    return
-  }
-
-  const banner = document.createElement('div')
-  banner.id = 'user-lockdown-blocked-banner'
-  banner.className = 'user-lockdown-blocked-banner'
-  banner.setAttribute('role', blockedAction ? 'alert' : 'status')
-  banner.textContent = blockedAction
-    ? `${t('user_lockdown', 'This action has been disabled by your administrator.')} ${t(
-        'user_lockdown',
-        'Read-only access: You can view and download existing files. Changes are disabled by your administrator.',
-      )}`
-    : t(
-        'user_lockdown',
-        'Read-only access: You can view and download existing files. Changes are disabled by your administrator.',
-      )
-
-  const content = document.querySelector('main, #content-vue, #content')
-  if (content === null) {
-    document.body.prepend(banner)
-  } else {
-    content.prepend(banner)
-  }
-
-  if (blockedAction) {
-    banner.setAttribute('tabindex', '-1')
-    banner.focus()
-    currentUrl.searchParams.delete('user_lockdown')
-    window.history.replaceState(window.history.state, '', currentUrl)
-  }
-}
-
 const initializeFilesLockdown = (): (() => void) => {
   document.documentElement.classList.add('user-lockdown-restricted')
-  showRestrictionBanner()
   hideBlockedControls(document)
+  hideReadOnlyNotifications(document)
 
   let scanScheduled = false
   let scanFrameId: number | null = null
@@ -99,8 +86,8 @@ const initializeFilesLockdown = (): (() => void) => {
 
     scanScheduled = true
     scanFrameId = window.requestAnimationFrame(() => {
-      showRestrictionBanner()
       hideBlockedControls(document)
+      hideReadOnlyNotifications(document)
       scanScheduled = false
       scanFrameId = null
     })
@@ -113,6 +100,7 @@ const initializeFilesLockdown = (): (() => void) => {
     if (scanFrameId !== null) {
       window.cancelAnimationFrame(scanFrameId)
     }
+    document.documentElement.classList.remove('user-lockdown-restricted')
   }
 }
 

@@ -123,7 +123,7 @@
   position: relative;
 }
 
-.user-lockdown-input {
+.user-lockdown-search-field > .user-lockdown-input {
   width: 100%;
   min-height: 44px;
   margin: 0;

@@ -28,7 +28,6 @@ OC.L10N.register(
 		'Administrators cannot be restricted.': 'Administratoren können nicht eingeschränkt werden.',
 		'Authentication is required.': 'Eine Anmeldung ist erforderlich.',
 		'This action has been disabled by your administrator.': 'Diese Aktion wurde von deinem Administrator deaktiviert.',
-		'Read-only access: You can view and download existing files. Changes are disabled by your administrator.': 'Schreibgeschützter Zugriff: Du kannst vorhandene Dateien anzeigen und herunterladen. Änderungen wurden von deinem Administrator deaktiviert.',
 		'The request could not be completed. Please try again.': 'Die Anfrage konnte nicht abgeschlossen werden. Bitte versuche es erneut.',
 		'The server returned an invalid response.': 'Der Server hat eine ungültige Antwort zurückgegeben.',
 		'Loading restricted users': 'Eingeschränkte Benutzer werden geladen',

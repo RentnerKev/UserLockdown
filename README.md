@@ -22,7 +22,7 @@ The app enforces restrictions server-side:
 - Administrators are never restricted, even if a stale database row exists.
 - Deleting a user removes its restriction row.
 
-The Files UI also removes write controls and shows a persistent read-only notice.
+The Files UI removes write controls while keeping the standard Files layout.
 Those visual changes are usability aids; server-side DAV, middleware, and event
 guards are the security controls. User Lockdown covers authenticated Nextcloud
 web and WebDAV requests; CLI commands, background jobs, anonymous public-upload

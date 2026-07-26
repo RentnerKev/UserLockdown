@@ -28,7 +28,6 @@ OC.L10N.register(
 		'Administrators cannot be restricted.': 'Administrators cannot be restricted.',
 		'Authentication is required.': 'Authentication is required.',
 		'This action has been disabled by your administrator.': 'This action has been disabled by your administrator.',
-		'Read-only access: You can view and download existing files. Changes are disabled by your administrator.': 'Read-only access: You can view and download existing files. Changes are disabled by your administrator.',
 		'The request could not be completed. Please try again.': 'The request could not be completed. Please try again.',
 		'The server returned an invalid response.': 'The server returned an invalid response.',
 		'Loading restricted users': 'Loading restricted users',
