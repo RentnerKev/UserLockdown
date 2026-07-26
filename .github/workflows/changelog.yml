@@ -1,19 +1,35 @@
 name: Publish release changelog
 
 on:
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      prerelease:
+        required: true
+        type: boolean
+      previous_release_tag:
+        required: true
+        type: string
+      published_at:
+        required: true
+        type: string
+      release_tag:
+        required: true
+        type: string
 
 permissions:
   contents: write
 
 concurrency:
-  group: changelog-${{ github.event.release.tag_name }}
-  cancel-in-progress: true
+  group: changelog-${{ inputs.release_tag }}
+  cancel-in-progress: false
 
 env:
   GIT_CLIFF_VERSION: 2.13.1
   GIT_CLIFF_LINUX_AMD64_SHA256: 9a1263f24e59a2f508c7b3d3283c9dea94a8bf697f96dbc18cc783cac6284546
+  PREVIOUS_RELEASE_TAG: ${{ inputs.previous_release_tag }}
+  RELEASE_PRERELEASE: ${{ inputs.prerelease }}
+  RELEASE_PUBLISHED_AT: ${{ inputs.published_at }}
+  RELEASE_TAG: ${{ inputs.release_tag }}
 
 jobs:
   release-notes:
@@ -28,6 +44,7 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
           persist-credentials: false
+          ref: ${{ inputs.release_tag }}
 
       - name: Resolve release metadata
         shell: bash
@@ -37,35 +54,33 @@ jobs:
           node <<'NODE'
           const fs = require('node:fs')
 
-          const eventPath = process.env.GITHUB_EVENT_PATH
           const environmentPath = process.env.GITHUB_ENV
 
-          if (!eventPath || !environmentPath) {
-            throw new Error('GitHub release event paths are unavailable')
+          if (!environmentPath) {
+            throw new Error('GitHub environment path is unavailable')
           }
 
-          const event = JSON.parse(fs.readFileSync(eventPath, 'utf8'))
-          const release = event.release
-          const releaseTag = release?.tag_name
-          const publishedAt = release?.published_at
+          const releaseTag = process.env.RELEASE_TAG
+          const prerelease = process.env.RELEASE_PRERELEASE
+          const publishedAt = process.env.RELEASE_PUBLISHED_AT
 
           if (
             typeof releaseTag !== 'string' ||
             releaseTag.length === 0 ||
             /[\r\n]/.test(releaseTag)
           ) {
-            throw new Error('Release event contains no valid tag name')
+            throw new Error('Workflow input contains no valid release tag')
           }
 
-          if (typeof release?.prerelease !== 'boolean') {
-            throw new Error('Release event contains no valid prerelease state')
+          if (prerelease !== 'true' && prerelease !== 'false') {
+            throw new Error('Workflow input contains no valid prerelease state')
           }
 
           if (
             typeof publishedAt !== 'string' ||
             Number.isNaN(Date.parse(publishedAt))
           ) {
-            throw new Error('Release event contains no valid publication date')
+            throw new Error('Workflow input contains no valid publication date')
           }
 
           const publishedDate = new Intl.DateTimeFormat('en-GB', {
@@ -78,8 +93,6 @@ jobs:
           fs.appendFileSync(
             environmentPath,
             [
-              `RELEASE_TAG=${releaseTag}`,
-              `RELEASE_PRERELEASE=${release.prerelease}`,
               `RELEASE_PUBLISHED_DATE=${publishedDate}`,
               '',
             ].join('\n'),
@@ -148,7 +161,7 @@ jobs:
           set -euo pipefail
 
           release_commit="$(git rev-parse --verify "${RELEASE_TAG}^{commit}")"
-          previous_tag=''
+          previous_tag="${PREVIOUS_RELEASE_TAG}"
 
           mapfile -t collocated_tags < <(git tag --points-at "${release_commit}")
           for tag in "${collocated_tags[@]}"; do
@@ -159,16 +172,10 @@ jobs:
             fi
           done
 
-          if git rev-parse --verify --quiet "${release_commit}^" >/dev/null; then
-            previous_tag="$(
-              git describe \
-                --tags \
-                --abbrev=0 \
-                "${release_commit}^" 2>/dev/null || true
-            )"
-          fi
-
           if [[ -n "${previous_tag}" ]]; then
+            previous_ref="refs/tags/${previous_tag}"
+            git check-ref-format "${previous_ref}"
+            git show-ref --verify --quiet "${previous_ref}"
             commit_range="${previous_tag}..${RELEASE_TAG}"
             printf 'Generating changelog for %s (%s).\n' \
               "${RELEASE_TAG}" "${commit_range}"

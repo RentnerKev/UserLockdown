@@ -39,9 +39,7 @@ if ($Mode -ne 'ArchiveStaged') {
 		'l10n',
 		'lib',
 		'templates',
-		'LICENSE',
-		'README.md',
-		'SECURITY.md'
+		'LICENSE'
 	)
 
 	foreach ($relativePath in $releaseInputs) {

@@ -33,7 +33,7 @@ stage_release() {
 	temporary_app="$temporary_root/$app_id"
 	mkdir -p "$temporary_app"
 
-	for path in appinfo css img js l10n lib templates LICENSE README.md SECURITY.md; do
+	for path in appinfo css img js l10n lib templates LICENSE; do
 		if [ ! -e "$project_root/$path" ]; then
 			printf '%s\n' "Missing release input: $path" >&2
 			exit 1
