@@ -4,6 +4,7 @@ on:
   push:
   pull_request:
   workflow_call:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -68,8 +69,29 @@ jobs:
           bun-version-file: package.json
       - run: bun install --frozen-lockfile
       - run: bun run build
-      - run: docker compose up -d --wait --wait-timeout 600 db redis mailpit nextcloud
-      - run: docker compose run --rm bootstrap
+      - name: Pull integration images
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for service in db redis mailpit nextcloud; do
+            for attempt in 1 2 3 4; do
+              if docker compose pull "$service"; then
+                break
+              fi
+
+              if (( attempt == 4 )); then
+                echo "::error title=Docker image pull failed::Could not pull ${service} after 4 attempts."
+                exit 1
+              fi
+
+              delay=$((10 * 2 ** (attempt - 1)))
+              echo "::warning title=Docker image pull retry::Service ${service}, attempt ${attempt}/4 failed; retrying in ${delay}s."
+              sleep "$delay"
+            done
+          done
+      - run: docker compose up -d --wait --wait-timeout 600 --pull never db redis mailpit nextcloud
+      - run: docker compose run --rm --pull never bootstrap
       - run: sh ./tests/integration/webdav-read-only.sh
       - if: always()
         run: docker compose logs --no-color
