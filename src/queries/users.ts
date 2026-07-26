@@ -7,7 +7,7 @@ import {
   searchUsers,
 } from '../api/client'
 
-export const userQueryKeys = {
+const userQueryKeys = {
   restricted: ['restricted-users'] as const,
   searchRoot: ['user-search'] as const,
   search: (query: string) => ['user-search', query] as const,

@@ -22,7 +22,7 @@ const responseErrorSchema = z.object({
   }),
 })
 
-export class ApiClientError extends Error {
+class ApiClientError extends Error {
   public readonly code: string
 
   public constructor(code: string, message: string) {
