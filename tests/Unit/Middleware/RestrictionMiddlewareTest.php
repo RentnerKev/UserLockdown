@@ -35,6 +35,39 @@ namespace OCA\Files_Sharing\Controller {
 	}
 }
 
+namespace OCA\FirstRunWizard\Controller {
+	use OCP\AppFramework\Controller;
+	use OCP\IRequest;
+
+	final class WizardController extends Controller {
+		public function __construct(IRequest $request) {
+			parent::__construct('firstrunwizard', $request);
+		}
+	}
+}
+
+namespace OCA\Notifications\Controller {
+	use OCP\AppFramework\Controller;
+	use OCP\IRequest;
+
+	final class EndpointController extends Controller {
+		public function __construct(IRequest $request) {
+			parent::__construct('notifications', $request);
+		}
+	}
+}
+
+namespace OCA\Recommendations\Controller {
+	use OCP\AppFramework\Controller;
+	use OCP\IRequest;
+
+	final class RecommendationController extends Controller {
+		public function __construct(IRequest $request) {
+			parent::__construct('recommendations', $request);
+		}
+	}
+}
+
 namespace OCA\Text\Controller {
 	use OCP\AppFramework\Controller;
 	use OCP\IRequest;
@@ -69,6 +102,23 @@ namespace OCA\Text\Controller {
 	}
 }
 
+namespace OCA\UserStatus\Controller {
+	use OCP\AppFramework\Controller;
+	use OCP\IRequest;
+
+	final class UserStatusController extends Controller {
+		public function __construct(IRequest $request) {
+			parent::__construct('user_status', $request);
+		}
+	}
+
+	final class HeartbeatController extends Controller {
+		public function __construct(IRequest $request) {
+			parent::__construct('user_status', $request);
+		}
+	}
+}
+
 namespace OC\Core\Controller {
 	use OCP\AppFramework\Controller;
 	use OCP\IRequest;
@@ -84,14 +134,31 @@ namespace OC\Core\Controller {
 			parent::__construct('core', $request);
 		}
 	}
+
+	final class ContactsMenuController extends Controller {
+		public function __construct(IRequest $request) {
+			parent::__construct('core', $request);
+		}
+	}
+
+	final class CSRFTokenController extends Controller {
+		public function __construct(IRequest $request) {
+			parent::__construct('core', $request);
+		}
+	}
 }
 
 namespace OCA\UserLockdown\Tests\Unit\Middleware {
+	use OC\Core\Controller\ContactsMenuController;
+	use OC\Core\Controller\CSRFTokenController;
 	use OC\Core\Controller\LostController;
 	use OC\Core\Controller\TwoFactorChallengeController;
 	use OCA\Files\Controller\ViewController;
 	use OCA\Files_Sharing\Controller\AcceptController;
 	use OCA\Files_Sharing\Controller\ShareAPIController;
+	use OCA\FirstRunWizard\Controller\WizardController;
+	use OCA\Notifications\Controller\EndpointController;
+	use OCA\Recommendations\Controller\RecommendationController;
 	use OCA\Text\Controller\AttachmentController;
 	use OCA\Text\Controller\SessionController;
 	use OCA\UserLockdown\Compatibility\TextSessionGuard;
@@ -99,6 +166,8 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 	use OCA\UserLockdown\Middleware\RestrictionMiddleware;
 	use OCA\UserLockdown\Service\RestrictedUserService;
 	use OCA\UserLockdown\Service\RestrictionContext;
+	use OCA\UserStatus\Controller\HeartbeatController as UserStatusHeartbeatController;
+	use OCA\UserStatus\Controller\UserStatusController;
 	use OCP\AppFramework\Controller;
 	use OCP\AppFramework\Http;
 	use OCP\AppFramework\Http\DataResponse;
@@ -131,6 +200,69 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 			$middleware = $this->createMiddleware('GET', '/index.php/apps/files');
 
 			$middleware->beforeController(new ViewController($this->request), 'index');
+
+			$this->addToAssertionCount(1);
+		}
+
+		/**
+		 * @return iterable<string, array{class-string<Controller>, string, string, string}>
+		 */
+		public static function backgroundReadRequestProvider(): iterable {
+			yield 'recommendations' => [
+				RecommendationController::class,
+				'GET',
+				'/ocs/v2.php/apps/recommendations/api/v1/recommendations',
+				'index',
+			];
+			yield 'user status' => [
+				UserStatusController::class,
+				'GET',
+				'/ocs/v2.php/apps/user_status/api/v1/user_status',
+				'getStatus',
+			];
+			yield 'notifications' => [
+				EndpointController::class,
+				'GET',
+				'/ocs/v2.php/apps/notifications/api/v2/notifications',
+				'listNotifications',
+			];
+			yield 'contact teams' => [
+				ContactsMenuController::class,
+				'GET',
+				'/index.php/contactsmenu/teams',
+				'getTeams',
+			];
+			yield 'CSRF token' => [
+				CSRFTokenController::class,
+				'GET',
+				'/index.php/csrftoken',
+				'index',
+			];
+			yield 'user status heartbeat' => [
+				UserStatusHeartbeatController::class,
+				'PUT',
+				'/ocs/v2.php/apps/user_status/api/v1/heartbeat',
+				'heartbeat',
+			];
+			yield 'dismiss first-run wizard' => [
+				WizardController::class,
+				'DELETE',
+				'/index.php/apps/firstrunwizard/wizard',
+				'disable',
+			];
+		}
+
+		/** @param class-string<Controller> $controllerClass */
+		#[DataProvider('backgroundReadRequestProvider')]
+		public function testBackgroundReadRequestIsAllowed(
+			string $controllerClass,
+			string $httpMethod,
+			string $requestUri,
+			string $controllerMethod,
+		): void {
+			$middleware = $this->createMiddleware($httpMethod, $requestUri);
+
+			$middleware->beforeController(new $controllerClass($this->request), $controllerMethod);
 
 			$this->addToAssertionCount(1);
 		}
@@ -221,6 +353,28 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 			);
 		}
 
+		public function testRestrictedTextContentPushIsAcknowledgedWithoutApplyingIt(): void {
+			$middleware = $this->createMiddleware(
+				'POST',
+				'/index.php/apps/text/session/42/push',
+				[
+					'steps' => [base64_encode("\0\2document-update")],
+					'version' => 17,
+				],
+				currentUserId: null,
+			);
+			$controller = new SessionController($this->request, 'alice');
+
+			$response = $this->handleRestriction($middleware, $controller, 'push');
+
+			self::assertInstanceOf(JSONResponse::class, $response);
+			self::assertSame(Http::STATUS_OK, $response->getStatus());
+			self::assertSame([
+				'steps' => [],
+				'version' => 17,
+			], $response->getData());
+		}
+
 		public function testAnonymousTextSessionAwarenessOnlyPushIsAllowed(): void {
 			$middleware = $this->createMiddleware(
 				'POST',
@@ -251,6 +405,44 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 			);
 
 			$this->addToAssertionCount(1);
+		}
+
+		/** @return iterable<string, array{string}> */
+		public static function emptyTextSyncStepProvider(): iterable {
+			yield 'sync step two' => ["\0\1\2\0\0"];
+			yield 'update' => ["\0\2\2\0\0"];
+		}
+
+		#[DataProvider('emptyTextSyncStepProvider')]
+		public function testAnonymousTextSessionEmptySyncPushIsAllowed(string $step): void {
+			$middleware = $this->createMiddleware(
+				'POST',
+				'/index.php/apps/text/session/42/push',
+				['steps' => [base64_encode($step)]],
+				currentUserId: null,
+			);
+
+			$middleware->beforeController(
+				new SessionController($this->request, 'alice'),
+				'push',
+			);
+
+			$this->addToAssertionCount(1);
+		}
+
+		public function testAnonymousTextSessionNonEmptySyncStepTwoIsBlocked(): void {
+			$middleware = $this->createMiddleware(
+				'POST',
+				'/index.php/apps/text/session/42/push',
+				['steps' => [base64_encode("\0\1\3abc")]],
+				currentUserId: null,
+			);
+
+			$this->expectException(RestrictedActionException::class);
+			$middleware->beforeController(
+				new SessionController($this->request, 'alice'),
+				'push',
+			);
 		}
 
 		public function testUnknownTextSessionPushFailsClosedEvenWithoutDocumentSteps(): void {
@@ -377,7 +569,7 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 
 			self::assertInstanceOf(RedirectResponse::class, $response);
 			self::assertSame(
-				'/index.php/apps/files?user_lockdown=blocked',
+				'/index.php/apps/files',
 				$response->getRedirectURL(),
 			);
 		}

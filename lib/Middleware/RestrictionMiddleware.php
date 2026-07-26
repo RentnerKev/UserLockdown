@@ -50,6 +50,12 @@ final class RestrictionMiddleware extends Middleware {
 
 	/** @var array<string, list<string>> */
 	private const READ_ONLY_CONTROLLER_METHODS = [
+		'OC\\Core\\Controller\\ContactsMenuController' => [
+			'getTeams',
+		],
+		'OC\\Core\\Controller\\CSRFTokenController' => [
+			'index',
+		],
 		'OCA\\Files\\Controller\\ApiController' => [
 			'getConfigs',
 			'getGridView',
@@ -87,6 +93,12 @@ final class RestrictionMiddleware extends Middleware {
 			'getShares',
 			'pendingShares',
 		],
+		'OCA\\Notifications\\Controller\\EndpointController' => [
+			'listNotifications',
+		],
+		'OCA\\Recommendations\\Controller\\RecommendationController' => [
+			'index',
+		],
 		'OCA\\Text\\Controller\\AttachmentController' => [
 			'getImageFile',
 			'getMediaFile',
@@ -94,6 +106,9 @@ final class RestrictionMiddleware extends Middleware {
 		],
 		'OCA\\Text\\Controller\\WorkspaceController' => [
 			'folder',
+		],
+		'OCA\\UserStatus\\Controller\\UserStatusController' => [
+			'getStatus',
 		],
 	];
 
@@ -103,6 +118,9 @@ final class RestrictionMiddleware extends Middleware {
 	 * @var array<string, list<string>>
 	 */
 	private const STATEFUL_READ_ONLY_CONTROLLER_METHODS = [
+		'OCA\\FirstRunWizard\\Controller\\WizardController' => [
+			'disable',
+		],
 		self::TEXT_ATTACHMENT_CONTROLLER => [
 			'getAttachmentList',
 		],
@@ -110,6 +128,9 @@ final class RestrictionMiddleware extends Middleware {
 			'create',
 			'sync',
 			'close',
+		],
+		'OCA\\UserStatus\\Controller\\HeartbeatController' => [
+			'heartbeat',
 		],
 	];
 
@@ -143,6 +164,8 @@ final class RestrictionMiddleware extends Middleware {
 		'HEAD',
 		'OPTIONS',
 	];
+
+	private bool $discardRestrictedTextPush = false;
 
 	public function __construct(
 		private readonly IRequest $request,
@@ -200,6 +223,9 @@ final class RestrictionMiddleware extends Middleware {
 					return;
 				}
 
+				$this->discardRestrictedTextPush
+					= $controllerClass === self::TEXT_SESSION_CONTROLLER
+					&& $methodName === 'push';
 				throw $this->restrictedAction(true);
 			}
 		}
@@ -313,6 +339,21 @@ final class RestrictionMiddleware extends Middleware {
 			throw $exception;
 		}
 
+		if (
+			$this->discardRestrictedTextPush
+			&& $controller::class === self::TEXT_SESSION_CONTROLLER
+			&& $methodName === 'push'
+		) {
+			$this->discardRestrictedTextPush = false;
+			$version = $this->request->getParam('version', -1);
+			$response = new JSONResponse([
+				'steps' => [],
+				'version' => is_int($version) ? $version : -1,
+			]);
+			$response->addHeader('Cache-Control', 'no-store');
+			return $response;
+		}
+
 		if ($exception->shouldHideAccountState()) {
 			$response = new JSONResponse(['status' => 'success']);
 			$response->addHeader('Cache-Control', 'no-store');
@@ -331,9 +372,7 @@ final class RestrictionMiddleware extends Middleware {
 			return $response;
 		}
 
-		$filesUrl = $this->urlGenerator->linkToRoute('files.view.index');
-		$separator = str_contains($filesUrl, '?') ? '&' : '?';
-		return new RedirectResponse($filesUrl . $separator . 'user_lockdown=blocked');
+		return new RedirectResponse($this->urlGenerator->linkToRoute('files.view.index'));
 	}
 
 	private function restrictedAction(bool $apiRequest): RestrictedActionException {
@@ -414,7 +453,7 @@ final class RestrictionMiddleware extends Middleware {
 		}
 
 		foreach ($steps as $step) {
-			if (!is_string($step) || !$this->isYjsSyncStepOne($step)) {
+			if (!is_string($step) || !$this->isAllowedYjsReadOnlyStep($step)) {
 				return false;
 			}
 		}
@@ -422,12 +461,23 @@ final class RestrictionMiddleware extends Middleware {
 		return true;
 	}
 
-	private function isYjsSyncStepOne(string $encodedStep): bool {
+	private function isAllowedYjsReadOnlyStep(string $encodedStep): bool {
 		$decodedStep = base64_decode($encodedStep, true);
-		return is_string($decodedStep)
-			&& strlen($decodedStep) >= 2
-			&& ord($decodedStep[0]) === 0
-			&& ord($decodedStep[1]) === 0;
+		if (
+			!is_string($decodedStep)
+			|| strlen($decodedStep) < 2
+			|| ord($decodedStep[0]) !== 0
+		) {
+			return false;
+		}
+
+		$syncMessageType = ord($decodedStep[1]);
+		if ($syncMessageType === 0) {
+			return true;
+		}
+
+		return in_array($syncMessageType, [1, 2], true)
+			&& $decodedStep === "\0" . chr($syncMessageType) . "\2\0\0";
 	}
 
 	private function isApiRequest(): bool {
