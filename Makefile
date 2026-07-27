@@ -40,4 +40,4 @@ docker-down:
 	docker compose down
 
 integration:
-	sh ./tests/integration/webdav-read-only.sh
+	sh ./tests/integration/permission-profiles.sh
