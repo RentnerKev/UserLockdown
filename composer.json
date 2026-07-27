@@ -1,6 +1,6 @@
 {
     "name": "kevin-straessler/user_lockdown",
-    "description": "Restrict selected Nextcloud users to viewing and downloading existing files.",
+    "description": "Manage granular access permissions for selected Nextcloud users.",
     "type": "nextcloud-app",
     "license": "AGPL-3.0-or-later",
     "authors": [

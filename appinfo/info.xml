@@ -7,11 +7,11 @@
 	  xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
 	<id>user_lockdown</id>
 	<name>User Lockdown</name>
-	<summary>Restrict selected users to read-only file access</summary>
-	<summary lang="de">Beschränke ausgewählte Benutzer auf schreibgeschützten Dateizugriff</summary>
-	<description>Restrict selected users to viewing and downloading existing files while administrators retain full control.</description>
-	<description lang="de">Beschränke ausgewählte Benutzer auf das Anzeigen und Herunterladen vorhandener Dateien, während Administratoren die vollständige Kontrolle behalten.</description>
-	<version>1.0.0</version>
+	<summary>Manage granular access permissions for selected users</summary>
+	<summary lang="de">Verwalte granulare Zugriffsrechte für ausgewählte Benutzer</summary>
+	<description>Control file viewing, writing, deletion, sharing, password changes, full access, and an optional All files-only interface per user with reusable presets and configurable defaults.</description>
+	<description lang="de">Steuere Dateiansicht, Schreiben, Löschen, Teilen, Passwortänderungen, Vollzugriff und eine optionale Oberfläche nur für „Alle Dateien“ je Benutzer mit wiederverwendbaren Presets und konfigurierbaren Standardrechten.</description>
+	<version>1.1.0</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author>Kevin Sträßler</author>
 	<namespace>UserLockdown</namespace>
@@ -23,10 +23,10 @@
 	<bugs>https://github.com/RentnerKev/UserLockdown/issues</bugs>
 	<repository>https://github.com/RentnerKev/UserLockdown</repository>
 	<screenshot small-thumbnail="https://raw.githubusercontent.com/RentnerKev/UserLockdown/main/.github/assets/appstore/user-lockdown-thumbnail.jpg">https://raw.githubusercontent.com/RentnerKev/UserLockdown/main/.github/assets/appstore/user-lockdown-overview.jpg</screenshot>
-	<screenshot>https://raw.githubusercontent.com/RentnerKev/UserLockdown/main/.github/assets/readme/admin-management.jpg</screenshot>
-	<screenshot>https://raw.githubusercontent.com/RentnerKev/UserLockdown/main/.github/assets/readme/admin-search.jpg</screenshot>
-	<screenshot>https://raw.githubusercontent.com/RentnerKev/UserLockdown/main/.github/assets/readme/restricted-files.jpg</screenshot>
-	<screenshot>https://raw.githubusercontent.com/RentnerKev/UserLockdown/main/.github/assets/readme/logout-menu.jpg</screenshot>
+	<screenshot>https://raw.githubusercontent.com/RentnerKev/UserLockdown/main/.github/assets/readme/admin-permissions.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/RentnerKev/UserLockdown/main/.github/assets/readme/user-permissions-dialog.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/RentnerKev/UserLockdown/main/.github/assets/readme/restricted-files-1.1.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/RentnerKev/UserLockdown/main/.github/assets/readme/restricted-account-menu-1.1.png</screenshot>
 	<dependencies>
 		<php min-version="8.2" max-version="8.5" />
 		<nextcloud min-version="32" max-version="34" />
