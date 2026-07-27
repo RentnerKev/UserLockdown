@@ -1,7 +1,7 @@
 <p align="center">
   <img
     src=".github/assets/readme/user-lockdown-hero.png"
-    alt="User Lockdown — read-only security for Nextcloud by RentnerKev"
+    alt="User Lockdown — granular access control for Nextcloud by RentnerKev"
     width="100%"
   >
 </p>
@@ -9,7 +9,7 @@
 <h1 align="center">User Lockdown</h1>
 
 <p align="center">
-  <strong>Server-enforced read-only access for selected Nextcloud users.</strong>
+  <strong>Server-enforced, granular access control for selected Nextcloud users.</strong>
 </p>
 
 <p align="center">
@@ -19,78 +19,105 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0--or--later-663399" alt="AGPL 3.0 or later"></a>
 </p>
 
-User Lockdown is a Nextcloud security app that places selected, non-admin users
-into a deliberately narrow read-only mode. Restricted users can sign in, sign
-out, browse existing files, preview them, and download them. Administrators keep
-full control and manage the restricted-user list centrally.
+User Lockdown is a Nextcloud security app for centrally managing what selected,
+non-admin users may do. Administrators can independently allow file viewing,
+writing, deletion, sharing, and password changes, or grant a managed user normal
+full access. Reusable presets and configurable default permissions make recurring
+policies quick to apply. An optional focused-files mode hides the Files sidebar
+and keeps the account in **All files**.
 
-Version 1.0.0 supports Nextcloud 32–34 and PHP 8.2–8.5.
+Version 1.1.0 supports Nextcloud 32–34 and PHP 8.2–8.5. Existing users from
+version 1.0.0 keep their previous read-only behavior after the update.
 
 ## See it in action
 
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src=".github/assets/readme/admin-management.jpg" alt="User Lockdown administration overview" width="100%">
+      <img src=".github/assets/readme/admin-permissions.png" alt="User Lockdown default permissions and presets" width="100%">
       <br>
-      <strong>Central administration</strong><br>
-      <sub>Review restricted users and remove restrictions from one focused settings page.</sub>
+      <strong>Defaults and presets</strong><br>
+      <sub>Configure the permissions copied to new managed users and reuse recurring profiles.</sub>
     </td>
     <td width="50%" valign="top">
-      <img src=".github/assets/readme/admin-search.jpg" alt="User Lockdown user search" width="100%">
+      <img src=".github/assets/readme/user-permissions-dialog.png" alt="User Lockdown permission editor for an individual user" width="100%">
       <br>
-      <strong>Fast user search</strong><br>
-      <sub>Find non-admin accounts by display name or user ID and restrict them immediately.</sub>
+      <strong>Per-user control</strong><br>
+      <sub>Apply a preset or adjust every permission independently for one managed account.</sub>
     </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <img src=".github/assets/readme/restricted-files.jpg" alt="Restricted Nextcloud Files interface" width="100%">
+      <img src=".github/assets/readme/restricted-files-1.1.png" alt="Focused Nextcloud All files interface without the Files sidebar" width="100%">
       <br>
-      <strong>Clean restricted Files view</strong><br>
-      <sub>Viewing, previewing, and downloading remain available without intrusive warning panels.</sub>
+      <strong>Focused Files view</strong><br>
+      <sub>Optionally remove the sidebar and keep the user in All files while preserving the assigned capabilities.</sub>
     </td>
     <td width="50%" valign="top">
-      <img src=".github/assets/readme/logout-menu.jpg" alt="Restricted user logout menu" width="100%">
+      <img src=".github/assets/readme/restricted-account-menu-1.1.png" alt="Restricted user account menu" width="100%">
       <br>
       <strong>Minimal account menu</strong><br>
-      <sub>Restricted sessions expose only the action the user still needs: signing out.</sub>
+      <sub>Locked-down sessions expose only logout and, when allowed, the password settings.</sub>
     </td>
   </tr>
 </table>
 
 ## Highlights
 
-- Central restriction management in the Nextcloud administration settings.
-- Read, preview, and download access without upload, edit, share, rename, or
-  delete permissions.
+- Per-user permissions for viewing, writing, deleting, sharing, changing the
+  account password, hiding the Files navigation, and normal full access.
+- Built-in profiles for blocked, read-only, file editor, deletion-only,
+  password-only, and normal users.
+- Custom presets and configurable defaults. Presets are copied as snapshots, so
+  editing one never changes existing users silently.
 - Server-side enforcement across WebDAV, AppFramework controllers, shares,
-  password actions, and file mutation events.
-- A normal-looking Files interface with write controls removed and no recurring
-  read-only notification noise.
+  password actions, Text sessions, and file events.
+- A capability-aware Files interface without recurring read-only notification
+  noise.
 - Deterministic, signed release archives with automated GitHub and Nextcloud App
   Store publishing.
 
+## Permission model
+
+| Permission | Allows |
+| --- | --- |
+| View and download files | Browse folders, preview files, and download existing content. |
+| Create and edit files | Upload, create, edit, rename, move, and copy files and folders. Requires file viewing. |
+| Delete files | Delete existing files and folders. Requires file viewing but not write access. |
+| Share files | Create and manage shares. Requires file viewing. |
+| Change own password | Open the personal security page and change the account password. |
+| Hide Files navigation | Remove the Files sidebar and keep the user in **All files**. Requires file viewing. |
+| Normal user (full access) | Bypass User Lockdown completely while keeping the user in the managed list. |
+
+Turning off file viewing also turns off writing, deletion, sharing, and the
+focused-files option. The focused-files option changes navigation, not the
+underlying file permissions; direct links to other Files views return to **All
+files**. A user without file viewing or password changes retains only a safe
+shell for signing out. Removing a user from the managed list is different from
+the **Normal user** preset: removal deletes the policy row, while the preset
+keeps an explicit, reusable full-access assignment.
+
 ## Security boundary
 
-The app enforces restrictions server-side:
+The app enforces the assigned permissions server-side:
 
-- WebDAV permits only `GET`, `HEAD`, `OPTIONS`, `PROPFIND`, and `REPORT` on the
-  authenticated user's Files tree.
-- Uploads, chunk uploads, create, write, rename, copy, move, touch, and delete
-  operations are rejected.
-- AppFramework controllers outside the read-only Files surface and logout are
-  rejected for restricted sessions.
-- Share creation, share interaction, password changes, and lost-password reset
-  completion are rejected.
+- WebDAV checks read, write, delete, destination, and overwrite operations on
+  the authenticated user's Files and upload trees.
+- File events provide a second enforcement layer for reads, writes, copies,
+  renames, touches, and deletions.
+- AppFramework access is limited to the Files surface, authentication, logout,
+  and the explicitly allowed password and sharing actions.
+- Share creation and management, password changes, and lost-password flows use
+  their dedicated permissions.
 - Administrators are never restricted, even if a stale database row exists.
-- Deleting a user removes its restriction row.
+- Full-access profiles bypass every User Lockdown guard.
+- Deleting or recreating a user removes stale policy data for that user ID.
 
-The Files UI removes write controls while keeping the standard Files layout.
-Those visual changes are usability aids; server-side DAV, middleware, and event
-guards are the security controls. User Lockdown covers authenticated Nextcloud
-web and WebDAV requests; CLI commands, background jobs, anonymous public-upload
-links, and mutations performed entirely inside third-party code are outside this
+The Files UI removes unavailable controls and can hide its sidebar. Those visual
+changes are usability aids; server-side DAV, middleware, and event guards are
+the security controls. User Lockdown covers authenticated Nextcloud web and
+WebDAV requests; CLI commands, background jobs, anonymous public-upload links,
+and mutations performed entirely inside third-party code are outside this
 boundary.
 
 ## Installation
@@ -111,9 +138,18 @@ files invalidate the integrity signature.
 
 ## Administration
 
-Open **Administration settings → Security → User Lockdown**. Search for a
-non-admin user and add or remove the restriction. The change applies on the
-user's next request.
+Open **Administration settings → Security → User Lockdown**.
+
+1. Configure the permissions new managed users should receive by default.
+2. Optionally create custom presets for recurring roles.
+3. Search for a non-admin user and select **Add**.
+4. Use **Edit** in the managed-user table to apply a preset or change individual
+   permissions.
+5. Use **Remove** to delete the explicit policy and return the account to normal
+   unmanaged behavior.
+
+Permission changes apply on the user's next request. Updating or deleting a
+preset does not modify users that previously received it.
 
 ## Local development
 
@@ -140,7 +176,7 @@ Development endpoints and credentials:
 These credentials are development-only and must never be used in production.
 
 Run all checks with `make check`; use
-`sh ./tests/integration/webdav-read-only.sh` for the WebDAV integration suite
+`sh ./tests/integration/permission-profiles.sh` for the permission-profile integration suite
 after the development stack has started.
 
 ## Release
@@ -160,9 +196,10 @@ app ID.
 For every update:
 
 1. Increase the version in `appinfo/info.xml` and `package.json` to the same,
-   higher semantic version.
+   higher semantic version. New backward-compatible functionality increments
+   the minor version; fixes increment the patch version.
 2. Commit and push the release-ready state.
-3. Create a GitHub release for the matching `v<SemVer>` tag, such as `v1.0.1`,
+3. Create a GitHub release for the matching `v<SemVer>` tag, such as `v1.1.1`,
    and press **Publish release**.
 
 [`release.yml`](.github/workflows/release.yml) then runs the complete CI suite,
