@@ -22,6 +22,11 @@
 	<website>https://github.com/RentnerKev/UserLockdown</website>
 	<bugs>https://github.com/RentnerKev/UserLockdown/issues</bugs>
 	<repository>https://github.com/RentnerKev/UserLockdown</repository>
+	<screenshot small-thumbnail="https://raw.githubusercontent.com/RentnerKev/UserLockdown/main/.github/assets/appstore/user-lockdown-thumbnail.jpg">https://raw.githubusercontent.com/RentnerKev/UserLockdown/main/.github/assets/appstore/user-lockdown-overview.jpg</screenshot>
+	<screenshot>https://raw.githubusercontent.com/RentnerKev/UserLockdown/main/.github/assets/readme/admin-management.jpg</screenshot>
+	<screenshot>https://raw.githubusercontent.com/RentnerKev/UserLockdown/main/.github/assets/readme/admin-search.jpg</screenshot>
+	<screenshot>https://raw.githubusercontent.com/RentnerKev/UserLockdown/main/.github/assets/readme/restricted-files.jpg</screenshot>
+	<screenshot>https://raw.githubusercontent.com/RentnerKev/UserLockdown/main/.github/assets/readme/logout-menu.jpg</screenshot>
 	<dependencies>
 		<php min-version="8.2" max-version="8.5" />
 		<nextcloud min-version="32" max-version="34" />
