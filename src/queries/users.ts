@@ -5,7 +5,9 @@ import {
   fetchRestrictedUsers,
   removeRestrictedUser,
   searchUsers,
+  updateRestrictedUser,
 } from '../api/client'
+import type { PermissionSet } from '../types/permissions'
 
 const userQueryKeys = {
   restricted: ['restricted-users'] as const,
@@ -30,7 +32,7 @@ export const useAddRestrictedUserMutation = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: addRestrictedUser,
+    mutationFn: (userId: string) => addRestrictedUser(userId),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: userQueryKeys.restricted }),
@@ -44,12 +46,24 @@ export const useRemoveRestrictedUserMutation = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: removeRestrictedUser,
+    mutationFn: (userId: string) => removeRestrictedUser(userId),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: userQueryKeys.restricted }),
         queryClient.invalidateQueries({ queryKey: userQueryKeys.searchRoot }),
       ])
+    },
+  })
+}
+
+export const useUpdateRestrictedUserMutation = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ userId, permissions }: { userId: string; permissions: PermissionSet }) =>
+      updateRestrictedUser(userId, permissions),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: userQueryKeys.restricted })
     },
   })
 }

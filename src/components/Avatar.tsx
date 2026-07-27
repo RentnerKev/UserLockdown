@@ -1,10 +1,10 @@
 import { generateUrl } from '@nextcloud/router'
 import { useState } from 'react'
 
-import type { RestrictedUser } from '../types/user'
+import type { RestrictedUser, SearchUser } from '../types/user'
 
 type AvatarProps = {
-  user: RestrictedUser
+  user: RestrictedUser | SearchUser
   size?: 'small' | 'large'
 }
 

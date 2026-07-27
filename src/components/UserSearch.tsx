@@ -3,12 +3,20 @@ import { type KeyboardEvent as ReactKeyboardEvent, useEffect, useRef, useState }
 
 import { useAddRestrictedUserMutation, useUserSearchQuery } from '../queries/users'
 import type { AdminConfig } from '../schemas/api'
+import {
+  matchingPreset,
+  presetDisplayName,
+  type PermissionPreset,
+  type PermissionSet,
+} from '../types/permissions'
 import type { SearchUser } from '../types/user'
 import { Avatar } from './Avatar'
 
 type UserSearchProps = {
   config: AdminConfig
   restrictedUserIds: ReadonlySet<string>
+  defaultPermissions: PermissionSet
+  presets: PermissionPreset[]
 }
 
 const readableError = (error: unknown): string =>
@@ -27,7 +35,12 @@ const useDebouncedValue = (value: string, delay: number): string => {
   return debouncedValue
 }
 
-export const UserSearch = ({ config, restrictedUserIds }: UserSearchProps) => {
+export const UserSearch = ({
+  config,
+  restrictedUserIds,
+  defaultPermissions,
+  presets,
+}: UserSearchProps) => {
   const [searchText, setSearchText] = useState('')
   const [selectedUser, setSelectedUser] = useState<SearchUser | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -38,6 +51,7 @@ export const UserSearch = ({ config, restrictedUserIds }: UserSearchProps) => {
   const searchQuery = useUserSearchQuery(debouncedSearchText, searchEnabled)
   const addMutation = useAddRestrictedUserMutation()
   const users = searchQuery.data ?? []
+  const defaultPreset = matchingPreset(defaultPermissions, presets)
 
   const isRestricted = (user: SearchUser): boolean =>
     user.restricted || restrictedUserIds.has(user.id)
@@ -140,6 +154,13 @@ export const UserSearch = ({ config, restrictedUserIds }: UserSearchProps) => {
           'Enter at least {count} characters. Use the arrow keys to move through results.',
           { count: config.minimumSearchLength },
         )}
+      </p>
+      <p className="user-lockdown-default-hint">
+        {defaultPreset === null
+          ? t('user_lockdown', 'New users receive the saved custom default permissions.')
+          : t('user_lockdown', 'New users receive the “{presetName}” permissions.', {
+              presetName: presetDisplayName(defaultPreset),
+            })}
       </p>
 
       {showMinimumHint && (

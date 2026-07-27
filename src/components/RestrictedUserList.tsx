@@ -1,13 +1,16 @@
 import { translate as t } from '@nextcloud/l10n'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 
 import { useRemoveRestrictedUserMutation } from '../queries/users'
+import { matchingPreset, presetDisplayName, type PermissionPreset } from '../types/permissions'
 import type { RestrictedUser } from '../types/user'
 import { Avatar } from './Avatar'
 import { ConfirmDialog } from './ConfirmDialog'
+import { UserPermissionsDialog } from './UserPermissionsDialog'
 
 type RestrictedUserListProps = {
   users: RestrictedUser[]
+  presets: PermissionPreset[]
 }
 
 const readableError = (error: unknown): string =>
@@ -15,9 +18,9 @@ const readableError = (error: unknown): string =>
     ? error.message
     : t('user_lockdown', 'The request could not be completed. Please try again.')
 
-export const RestrictedUserList = ({ users }: RestrictedUserListProps) => {
+export const RestrictedUserList = ({ users, presets }: RestrictedUserListProps) => {
   const [dialogUser, setDialogUser] = useState<RestrictedUser | null>(null)
-  const triggerButtonRef = useRef<HTMLButtonElement | null>(null)
+  const [editUser, setEditUser] = useState<RestrictedUser | null>(null)
   const removeMutation = useRemoveRestrictedUserMutation()
 
   const closeDialog = () => {
@@ -26,12 +29,10 @@ export const RestrictedUserList = ({ users }: RestrictedUserListProps) => {
     }
 
     setDialogUser(null)
-    window.requestAnimationFrame(() => triggerButtonRef.current?.focus())
   }
 
-  const openDialog = (user: RestrictedUser, trigger: HTMLButtonElement) => {
+  const openDialog = (user: RestrictedUser) => {
     removeMutation.reset()
-    triggerButtonRef.current = trigger
     setDialogUser(user)
   }
 
@@ -49,8 +50,8 @@ export const RestrictedUserList = ({ users }: RestrictedUserListProps) => {
     <section className="user-lockdown-card" aria-labelledby="user-lockdown-list-title">
       <div className="user-lockdown-section-heading">
         <div>
-          <h2 id="user-lockdown-list-title">{t('user_lockdown', 'Restricted users')}</h2>
-          <p>{t('user_lockdown', 'These users can only view and download existing files.')}</p>
+          <h2 id="user-lockdown-list-title">{t('user_lockdown', 'Managed users')}</h2>
+          <p>{t('user_lockdown', 'Review and edit the permissions assigned to each user.')}</p>
         </div>
         <span
           className="user-lockdown-count"
@@ -68,27 +69,43 @@ export const RestrictedUserList = ({ users }: RestrictedUserListProps) => {
         </div>
       ) : (
         <ul className="user-lockdown-user-list">
-          {users.map((user) => (
-            <li key={user.id} className="user-lockdown-user-row">
-              <Avatar user={user} />
-              <span className="user-lockdown-user-identity">
-                <strong>{user.displayName}</strong>
-                <span>{user.id}</span>
-              </span>
-              <span className="user-lockdown-status">
-                <span aria-hidden="true" />
-                {t('user_lockdown', 'Restricted')}
-              </span>
-              <button
-                className="user-lockdown-button user-lockdown-button--secondary user-lockdown-user-row__remove"
-                type="button"
-                onClick={(event) => openDialog(user, event.currentTarget)}
-              >
-                {t('user_lockdown', 'Remove')}
-                <span className="user-lockdown-visually-hidden"> {user.displayName}</span>
-              </button>
-            </li>
-          ))}
+          {users.map((user) => {
+            const preset = matchingPreset(user.permissions, presets)
+
+            return (
+              <li key={user.id} className="user-lockdown-user-row">
+                <Avatar user={user} />
+                <span className="user-lockdown-user-identity">
+                  <strong>{user.displayName}</strong>
+                  <span>{user.id}</span>
+                </span>
+                <span className="user-lockdown-status">
+                  <span aria-hidden="true" />
+                  {preset === null
+                    ? t('user_lockdown', 'Custom permissions')
+                    : presetDisplayName(preset)}
+                </span>
+                <span className="user-lockdown-user-row__actions">
+                  <button
+                    className="user-lockdown-button user-lockdown-button--secondary"
+                    type="button"
+                    onClick={() => setEditUser(user)}
+                  >
+                    {t('user_lockdown', 'Edit')}
+                    <span className="user-lockdown-visually-hidden"> {user.displayName}</span>
+                  </button>
+                  <button
+                    className="user-lockdown-button user-lockdown-button--secondary"
+                    type="button"
+                    onClick={() => openDialog(user)}
+                  >
+                    {t('user_lockdown', 'Remove')}
+                    <span className="user-lockdown-visually-hidden"> {user.displayName}</span>
+                  </button>
+                </span>
+              </li>
+            )
+          })}
         </ul>
       )}
 
@@ -99,6 +116,13 @@ export const RestrictedUserList = ({ users }: RestrictedUserListProps) => {
           errorMessage={removeMutation.isError ? readableError(removeMutation.error) : null}
           onCancel={closeDialog}
           onConfirm={confirmRemoval}
+        />
+      )}
+      {editUser !== null && (
+        <UserPermissionsDialog
+          user={editUser}
+          presets={presets}
+          onClose={() => setEditUser(null)}
         />
       )}
     </section>

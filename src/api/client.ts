@@ -6,11 +6,26 @@ import { z } from 'zod'
 import {
   addRestrictedUserResponseSchema,
   apiErrorResponseSchema,
+  permissionSettingsResponseSchema,
+  presetResponseSchema,
   removeRestrictedUserResponseSchema,
+  removePresetResponseSchema,
   restrictedUsersResponseSchema,
   searchUsersResponseSchema,
+  updateRestrictedUserResponseSchema,
 } from '../schemas/api'
+import type { PermissionPreset, PermissionSet } from '../types/permissions'
 import type { RestrictedUser, SearchUser } from '../types/user'
+
+export type PermissionSettings = {
+  defaultPermissions: PermissionSet
+  presets: PermissionPreset[]
+}
+
+export type SavePresetInput = {
+  name: string
+  permissions: PermissionSet
+}
 
 const requestHeaders = {
   'OCS-APIRequest': 'true',
@@ -107,6 +122,96 @@ export const removeRestrictedUser = async (userId: string): Promise<string> => {
     )
 
     return removeRestrictedUserResponseSchema.parse(response.data).data.userId
+  } catch (error: unknown) {
+    throw normalizeApiError(error)
+  }
+}
+
+export const updateRestrictedUser = async (
+  userId: string,
+  permissions: PermissionSet,
+): Promise<RestrictedUser> => {
+  try {
+    const response = await axios.put<unknown>(
+      generateUrl('/apps/user_lockdown/api/restricted-users/{userId}', { userId }),
+      { permissions },
+      { headers: requestHeaders },
+    )
+
+    return updateRestrictedUserResponseSchema.parse(response.data).data.user
+  } catch (error: unknown) {
+    throw normalizeApiError(error)
+  }
+}
+
+export const fetchPermissionSettings = async (): Promise<PermissionSettings> => {
+  try {
+    const response = await axios.get<unknown>(
+      generateUrl('/apps/user_lockdown/api/permission-settings'),
+      { headers: requestHeaders },
+    )
+
+    return permissionSettingsResponseSchema.parse(response.data).data
+  } catch (error: unknown) {
+    throw normalizeApiError(error)
+  }
+}
+
+export const updateDefaultPermissions = async (
+  permissions: PermissionSet,
+): Promise<PermissionSettings> => {
+  try {
+    const response = await axios.put<unknown>(
+      generateUrl('/apps/user_lockdown/api/permission-settings/default'),
+      { permissions },
+      { headers: requestHeaders },
+    )
+
+    return permissionSettingsResponseSchema.parse(response.data).data
+  } catch (error: unknown) {
+    throw normalizeApiError(error)
+  }
+}
+
+export const createPreset = async (input: SavePresetInput): Promise<PermissionPreset> => {
+  try {
+    const response = await axios.post<unknown>(
+      generateUrl('/apps/user_lockdown/api/presets'),
+      input,
+      { headers: requestHeaders },
+    )
+
+    return presetResponseSchema.parse(response.data).data.preset
+  } catch (error: unknown) {
+    throw normalizeApiError(error)
+  }
+}
+
+export const updatePreset = async (
+  presetId: string,
+  input: SavePresetInput,
+): Promise<PermissionPreset> => {
+  try {
+    const response = await axios.put<unknown>(
+      generateUrl('/apps/user_lockdown/api/presets/{presetId}', { presetId }),
+      input,
+      { headers: requestHeaders },
+    )
+
+    return presetResponseSchema.parse(response.data).data.preset
+  } catch (error: unknown) {
+    throw normalizeApiError(error)
+  }
+}
+
+export const removePreset = async (presetId: string): Promise<string> => {
+  try {
+    const response = await axios.delete<unknown>(
+      generateUrl('/apps/user_lockdown/api/presets/{presetId}', { presetId }),
+      { headers: requestHeaders },
+    )
+
+    return removePresetResponseSchema.parse(response.data).data.presetId
   } catch (error: unknown) {
     throw normalizeApiError(error)
   }

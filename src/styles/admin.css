@@ -25,6 +25,7 @@
 .user-lockdown-page-header h1,
 .user-lockdown-section-heading h2,
 .user-lockdown-empty-state h3,
+.user-lockdown-preset-list-heading h3,
 .user-lockdown-dialog h2 {
   margin: 0;
   color: var(--color-main-text, #222);
@@ -39,6 +40,7 @@
 .user-lockdown-page-header p,
 .user-lockdown-section-heading p,
 .user-lockdown-empty-state p,
+.user-lockdown-preset-list-heading p,
 .user-lockdown-dialog p,
 .user-lockdown-help {
   margin: 6px 0 0;
@@ -119,6 +121,22 @@
   font-weight: 600;
 }
 
+.user-lockdown-input,
+.user-lockdown-select {
+  min-height: 42px;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border-maxcontrast, #8a8a8a);
+  border-radius: var(--border-radius-large, 10px);
+  background: var(--color-main-background, #fff);
+  color: var(--color-main-text, #222);
+  font: inherit;
+}
+
+.user-lockdown-select {
+  width: min(100%, 360px);
+}
+
 .user-lockdown-search-field {
   position: relative;
 }
@@ -128,11 +146,6 @@
   min-height: 44px;
   margin: 0;
   padding: 9px 44px 9px 42px;
-  border: 1px solid var(--color-border-maxcontrast, #8a8a8a);
-  border-radius: var(--border-radius-large, 10px);
-  background: var(--color-main-background, #fff);
-  color: var(--color-main-text, #222);
-  font: inherit;
 }
 
 .user-lockdown-input::placeholder {
@@ -175,6 +188,13 @@
   font-size: 13px;
 }
 
+.user-lockdown-default-hint {
+  margin: 10px 0 0;
+  color: var(--color-main-text, #222);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .user-lockdown-search-results,
 .user-lockdown-user-list {
   margin: 16px 0 0;
@@ -199,6 +219,14 @@
 
 .user-lockdown-user-row {
   grid-template-columns: auto minmax(0, 1fr) auto auto;
+}
+
+.user-lockdown-user-row__actions,
+.user-lockdown-preset-row__actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .user-lockdown-user-identity {
@@ -289,6 +317,15 @@
   background: var(--color-background-hover, #f2f2f2);
 }
 
+.user-lockdown-button--primary {
+  background: var(--color-primary-element, #00679e);
+  color: var(--color-primary-element-text, #fff);
+}
+
+.user-lockdown-button--primary:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+
 .user-lockdown-button--danger {
   background: var(--color-error, #d72525);
   color: #fff;
@@ -304,6 +341,7 @@
 }
 
 .user-lockdown-input:focus-visible,
+.user-lockdown-select:focus-visible,
 .user-lockdown-button:focus-visible,
 .user-lockdown-link-button:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--color-primary-element, #00679e) 50%, transparent);
@@ -378,6 +416,15 @@
   );
 }
 
+.user-lockdown-message--success {
+  border-inline-start: 4px solid var(--color-success, #2d7d46);
+  background: color-mix(
+    in srgb,
+    var(--color-success, #2d7d46) 10%,
+    var(--color-main-background, #fff)
+  );
+}
+
 .user-lockdown-link-button {
   flex: 0 0 auto;
   padding: 3px;
@@ -409,11 +456,140 @@
   box-shadow: 0 18px 56px rgb(0 0 0 / 28%);
 }
 
+.user-lockdown-dialog--wide {
+  width: min(100%, 680px);
+  max-height: min(90vh, 820px);
+  overflow-y: auto;
+}
+
+.user-lockdown-dialog__user {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-block-end: 20px;
+}
+
+.user-lockdown-dialog__user p {
+  margin-block-start: 3px;
+}
+
 .user-lockdown-dialog__actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   margin-block-start: 24px;
+}
+
+.user-lockdown-settings-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.user-lockdown-settings-toolbar > div {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.user-lockdown-settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-block-start: 18px;
+}
+
+.user-lockdown-permission-editor {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 18px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.user-lockdown-permission-option {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--color-border, #d8d8d8);
+  border-radius: var(--border-radius-large, 10px);
+  background: var(--color-main-background, #fff);
+  cursor: pointer;
+}
+
+.user-lockdown-permission-option--full {
+  grid-column: 1 / -1;
+  background: color-mix(
+    in srgb,
+    var(--color-primary-element, #00679e) 8%,
+    var(--color-main-background, #fff)
+  );
+}
+
+.user-lockdown-permission-option:has(input:disabled) {
+  cursor: default;
+  opacity: 0.58;
+}
+
+.user-lockdown-permission-option input {
+  flex: 0 0 auto;
+  margin: 3px 0 0;
+}
+
+.user-lockdown-permission-option > span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.user-lockdown-permission-option strong {
+  font-weight: 600;
+}
+
+.user-lockdown-permission-option small {
+  margin-block-start: 2px;
+  color: var(--color-text-maxcontrast, #5f6368);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.user-lockdown-preset-list-heading {
+  margin-block-start: 26px;
+  padding-block-start: 22px;
+  border-block-start: 1px solid var(--color-border, #d8d8d8);
+}
+
+.user-lockdown-preset-list-heading h3 {
+  font-size: 17px;
+}
+
+.user-lockdown-preset-list {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.user-lockdown-preset-row {
+  display: flex;
+  min-height: 54px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 0;
+  border-block-start: 1px solid var(--color-border, #d8d8d8);
+}
+
+.user-lockdown-preset-row__identity {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.user-lockdown-preset-row__identity > span {
+  color: var(--color-text-maxcontrast, #5f6368);
+  font-size: 12px;
 }
 
 .user-lockdown-visually-hidden {
@@ -444,9 +620,19 @@
     justify-self: start;
   }
 
-  .user-lockdown-user-row__remove {
+  .user-lockdown-user-row__actions {
     grid-column: 3;
     grid-row: 1 / span 2;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .user-lockdown-permission-editor {
+    grid-template-columns: 1fr;
+  }
+
+  .user-lockdown-permission-option--full {
+    grid-column: auto;
   }
 }
 
@@ -470,6 +656,33 @@
 
   .user-lockdown-dialog__actions .user-lockdown-button {
     width: 100%;
+  }
+
+  .user-lockdown-settings-toolbar,
+  .user-lockdown-preset-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .user-lockdown-settings-toolbar .user-lockdown-button,
+  .user-lockdown-settings-toolbar .user-lockdown-select,
+  .user-lockdown-preset-row__actions,
+  .user-lockdown-preset-row__actions .user-lockdown-button {
+    width: 100%;
+  }
+
+  .user-lockdown-user-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .user-lockdown-user-row__actions {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    flex-direction: row;
+  }
+
+  .user-lockdown-user-row__actions .user-lockdown-button {
+    flex: 1 1 0;
   }
 }
 

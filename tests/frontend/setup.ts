@@ -19,7 +19,7 @@ vi.mock('@nextcloud/router', () => ({
 }))
 
 vi.mock('@nextcloud/initial-state', () => ({
-  loadState: (_app: string, _key: string, fallback: unknown) => fallback,
+  loadState: vi.fn((_app: string, _key: string, fallback: unknown) => fallback),
 }))
 
 afterEach(() => {

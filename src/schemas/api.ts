@@ -1,12 +1,32 @@
 import { z } from 'zod'
 
-export const restrictedUserSchema = z.object({
+export const permissionSetSchema = z.object({
+  viewFiles: z.boolean(),
+  writeFiles: z.boolean(),
+  deleteFiles: z.boolean(),
+  shareFiles: z.boolean(),
+  changePassword: z.boolean(),
+  fullAccess: z.boolean(),
+})
+
+export const permissionPresetSchema = z.object({
+  id: z.string().trim().min(1),
+  name: z.string().trim().min(1).max(64),
+  builtIn: z.boolean(),
+  permissions: permissionSetSchema,
+})
+
+const userSummarySchema = z.object({
   id: z.string().trim().min(1),
   displayName: z.string().trim().min(1),
   avatarUrl: z.string().trim().min(1).nullable().default(null),
 })
 
-export const searchUserSchema = restrictedUserSchema.extend({
+export const restrictedUserSchema = userSummarySchema.extend({
+  permissions: permissionSetSchema,
+})
+
+export const searchUserSchema = userSummarySchema.extend({
   restricted: z.boolean().default(false),
 })
 
@@ -31,6 +51,31 @@ export const addRestrictedUserResponseSchema = z.object({
 export const removeRestrictedUserResponseSchema = z.object({
   data: z.object({
     userId: z.string().trim().min(1),
+  }),
+})
+
+export const updateRestrictedUserResponseSchema = z.object({
+  data: z.object({
+    user: restrictedUserSchema,
+  }),
+})
+
+export const permissionSettingsResponseSchema = z.object({
+  data: z.object({
+    defaultPermissions: permissionSetSchema,
+    presets: z.array(permissionPresetSchema),
+  }),
+})
+
+export const presetResponseSchema = z.object({
+  data: z.object({
+    preset: permissionPresetSchema,
+  }),
+})
+
+export const removePresetResponseSchema = z.object({
+  data: z.object({
+    presetId: z.string().trim().min(1),
   }),
 })
 
