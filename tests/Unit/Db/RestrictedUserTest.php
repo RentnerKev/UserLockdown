@@ -19,11 +19,13 @@ class RestrictedUserTest extends TestCase {
 			'user_id' => 'alice',
 			'created_at' => '1722000000',
 			'created_by' => 'admin',
+			'permissions' => '5',
 		]);
 
 		self::assertSame(7, $entity->getId());
 		self::assertSame('alice', $entity->getUserId());
 		self::assertSame(1_722_000_000, $entity->getCreatedAt());
 		self::assertSame('admin', $entity->getCreatedBy());
+		self::assertSame(5, $entity->getPermissions());
 	}
 }

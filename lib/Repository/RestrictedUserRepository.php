@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace OCA\UserLockdown\Repository;
 
 use OCA\UserLockdown\Db\RestrictedUser;
+use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Db\QBMapper;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
@@ -39,6 +40,25 @@ class RestrictedUserRepository extends QBMapper {
 			return $result->fetchOne() !== false;
 		} finally {
 			$result->closeCursor();
+		}
+	}
+
+	public function findByUserId(string $userId): ?RestrictedUser {
+		$query = $this->db->getQueryBuilder();
+		$query->select('*')
+			->from($this->getTableName())
+			->where($query->expr()->eq(
+				'user_id',
+				$query->createNamedParameter($userId, IQueryBuilder::PARAM_STR),
+			));
+
+		try {
+			/** @var RestrictedUser $entity */
+			$entity = $this->findEntity($query);
+
+			return $entity;
+		} catch (DoesNotExistException) {
+			return null;
 		}
 	}
 

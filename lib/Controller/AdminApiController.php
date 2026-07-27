@@ -11,6 +11,7 @@ namespace OCA\UserLockdown\Controller;
 
 use DomainException;
 use InvalidArgumentException;
+use OCA\UserLockdown\Policy\PermissionSet;
 use OCA\UserLockdown\Service\RestrictedUserService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
@@ -132,6 +133,68 @@ class AdminApiController extends Controller {
 	}
 
 	/** @return JSONResponse<Http::STATUS_*, array<string, mixed>, array<string, mixed>> */
+	public function update(mixed $userId = null, mixed $permissions = null): JSONResponse {
+		if (!$this->isValidUserId($userId) || !is_array($permissions)) {
+			return $this->validationError($this->l10n->t('The selected permissions are invalid.'));
+		}
+
+		try {
+			$permissionSet = PermissionSet::fromArray($permissions);
+		} catch (InvalidArgumentException) {
+			return $this->validationError($this->l10n->t('The selected permissions are invalid.'));
+		}
+
+		$admin = $this->userSession->getUser();
+		if ($admin === null) {
+			return $this->error(
+				'authentication_required',
+				$this->l10n->t('Authentication is required.'),
+				Http::STATUS_UNAUTHORIZED,
+			);
+		}
+
+		try {
+			$this->restrictedUserService->updatePermissions(
+				$userId,
+				$permissionSet,
+				$admin->getUID(),
+			);
+			$user = $this->restrictedUserService->getRestrictedUser($userId);
+			if ($user === null) {
+				throw new \RuntimeException('The updated restricted user could not be loaded.');
+			}
+
+			return $this->success(['user' => $this->withAvatar($user)]);
+		} catch (InvalidArgumentException $exception) {
+			$message = $exception->getMessage() === RestrictedUserService::ERROR_ADMIN_USER
+				? $this->l10n->t('Administrators cannot be restricted.')
+				: $this->l10n->t('The selected user is invalid.');
+
+			return $this->validationError($message);
+		} catch (DomainException $exception) {
+			if ($exception->getMessage() === RestrictedUserService::ERROR_NOT_RESTRICTED) {
+				return $this->error(
+					'not_restricted',
+					$this->l10n->t('The selected user is not restricted.'),
+					Http::STATUS_NOT_FOUND,
+				);
+			}
+
+			return $this->serverError(
+				'update_permissions_failed',
+				$this->l10n->t('Could not update the selected user.'),
+				$exception,
+			);
+		} catch (Throwable $exception) {
+			return $this->serverError(
+				'update_permissions_failed',
+				$this->l10n->t('Could not update the selected user.'),
+				$exception,
+			);
+		}
+	}
+
+	/** @return JSONResponse<Http::STATUS_*, array<string, mixed>, array<string, mixed>> */
 	public function destroy(mixed $userId = null): JSONResponse {
 		if (!$this->isValidUserId($userId)) {
 			return $this->validationError($this->l10n->t('The selected user is invalid.'));
@@ -158,8 +221,8 @@ class AdminApiController extends Controller {
 	}
 
 	/**
-	 * @param array{id: string, displayName: string, restricted?: bool} $user
-	 * @return array{id: string, displayName: string, avatarUrl: string, restricted?: bool}
+	 * @param array<string, mixed> $user
+	 * @return array<string, mixed>
 	 */
 	private function withAvatar(array $user): array {
 		return [
@@ -187,7 +250,7 @@ class AdminApiController extends Controller {
 	}
 
 	/**
-	 * @template S of Http::STATUS_UNAUTHORIZED|Http::STATUS_UNPROCESSABLE_ENTITY|Http::STATUS_CONFLICT|Http::STATUS_INTERNAL_SERVER_ERROR
+	 * @template S of Http::STATUS_UNAUTHORIZED|Http::STATUS_NOT_FOUND|Http::STATUS_UNPROCESSABLE_ENTITY|Http::STATUS_CONFLICT|Http::STATUS_INTERNAL_SERVER_ERROR
 	 * @param S $status
 	 * @return JSONResponse<S, array<string, mixed>, array<string, mixed>>
 	 */

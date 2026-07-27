@@ -21,16 +21,20 @@ use OCP\DB\Types;
  * @method void setCreatedAt(int $createdAt)
  * @method string getCreatedBy()
  * @method void setCreatedBy(string $createdBy)
+ * @method int getPermissions()
+ * @method void setPermissions(int $permissions)
  */
 class RestrictedUser extends Entity {
 	protected string $userId = '';
 	protected int $createdAt = 0;
 	protected string $createdBy = '';
+	protected int $permissions = 1;
 
 	public function __construct() {
 		$this->addType('id', Types::INTEGER);
 		$this->addType('userId', Types::STRING);
 		$this->addType('createdAt', Types::BIGINT);
 		$this->addType('createdBy', Types::STRING);
+		$this->addType('permissions', Types::INTEGER);
 	}
 }

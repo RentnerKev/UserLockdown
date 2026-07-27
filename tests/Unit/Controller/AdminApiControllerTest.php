@@ -9,8 +9,10 @@ declare(strict_types=1);
 
 namespace OCA\UserLockdown\Tests\Unit\Controller;
 
+use DomainException;
 use InvalidArgumentException;
 use OCA\UserLockdown\Controller\AdminApiController;
+use OCA\UserLockdown\Policy\PermissionSet;
 use OCA\UserLockdown\Service\RestrictedUserService;
 use OCP\AppFramework\Http;
 use OCP\IL10N;
@@ -64,7 +66,11 @@ class AdminApiControllerTest extends TestCase {
 
 	public function testIndexReturnsStructuredUsers(): void {
 		$this->service->method('getRestrictedUsers')->willReturn([
-			['id' => 'alice', 'displayName' => 'Alice Example'],
+			[
+				'id' => 'alice',
+				'displayName' => 'Alice Example',
+				'permissions' => PermissionSet::readOnly()->toArray(),
+			],
 		]);
 
 		$response = $this->controller->index();
@@ -75,6 +81,7 @@ class AdminApiControllerTest extends TestCase {
 				'users' => [[
 					'id' => 'alice',
 					'displayName' => 'Alice Example',
+					'permissions' => PermissionSet::readOnly()->toArray(),
 					'avatarUrl' => '/index.php/avatar/alice/64',
 				]],
 			],
@@ -147,6 +154,7 @@ class AdminApiControllerTest extends TestCase {
 		$this->service->method('getRestrictedUser')->with('alice')->willReturn([
 			'id' => 'alice',
 			'displayName' => 'Alice Example',
+			'permissions' => PermissionSet::readOnly()->toArray(),
 		]);
 
 		$response = $this->controller->create('alice');
@@ -157,6 +165,7 @@ class AdminApiControllerTest extends TestCase {
 				'user' => [
 					'id' => 'alice',
 					'displayName' => 'Alice Example',
+					'permissions' => PermissionSet::readOnly()->toArray(),
 					'avatarUrl' => '/index.php/avatar/alice/64',
 				],
 			],
@@ -190,5 +199,63 @@ class AdminApiControllerTest extends TestCase {
 
 		self::assertSame(Http::STATUS_OK, $response->getStatus());
 		self::assertSame(['data' => ['userId' => 'alice']], $response->getData());
+	}
+
+	public function testUpdateReturnsUserWithCanonicalPermissions(): void {
+		$admin = $this->createMock(IUser::class);
+		$admin->method('getUID')->willReturn('admin');
+		$this->userSession->method('getUser')->willReturn($admin);
+		$permissions = PermissionSet::fromMask(5);
+		$this->service->expects(self::once())
+			->method('updatePermissions')
+			->with(
+				'alice',
+				self::callback(static fn (PermissionSet $set): bool => $set->toMask() === 5),
+				'admin',
+			);
+		$this->service->method('getRestrictedUser')->with('alice')->willReturn([
+			'id' => 'alice',
+			'displayName' => 'Alice Example',
+			'permissions' => $permissions->toArray(),
+		]);
+
+		$response = $this->controller->update('alice', $permissions->toArray());
+
+		self::assertSame(Http::STATUS_OK, $response->getStatus());
+		self::assertSame([
+			'data' => [
+				'user' => [
+					'id' => 'alice',
+					'displayName' => 'Alice Example',
+					'permissions' => $permissions->toArray(),
+					'avatarUrl' => '/index.php/avatar/alice/64',
+				],
+			],
+		], $response->getData());
+	}
+
+	public function testUpdateRejectsDependentPermissionWithoutFileAccess(): void {
+		$this->service->expects(self::never())->method('updatePermissions');
+
+		$response = $this->controller->update('alice', [
+			...PermissionSet::blocked()->toArray(),
+			'deleteFiles' => true,
+		]);
+
+		self::assertSame(Http::STATUS_UNPROCESSABLE_ENTITY, $response->getStatus());
+		self::assertSame('validation_failed', $response->getData()['error']['code']);
+	}
+
+	public function testUpdateReturnsNotFoundForUnmanagedUser(): void {
+		$admin = $this->createMock(IUser::class);
+		$admin->method('getUID')->willReturn('admin');
+		$this->userSession->method('getUser')->willReturn($admin);
+		$this->service->method('updatePermissions')
+			->willThrowException(new DomainException(RestrictedUserService::ERROR_NOT_RESTRICTED));
+
+		$response = $this->controller->update('alice', PermissionSet::readOnly()->toArray());
+
+		self::assertSame(Http::STATUS_NOT_FOUND, $response->getStatus());
+		self::assertSame('not_restricted', $response->getData()['error']['code']);
 	}
 }

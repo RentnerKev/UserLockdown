@@ -13,6 +13,7 @@ use DomainException;
 use InvalidArgumentException;
 use OCA\UserLockdown\Compatibility\TextSessionGuard;
 use OCA\UserLockdown\Db\RestrictedUser;
+use OCA\UserLockdown\Policy\PermissionSet;
 use OCA\UserLockdown\Repository\RestrictedUserRepository;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\DB\Exception;
@@ -25,9 +26,10 @@ class RestrictedUserService {
 	public const ERROR_ADMIN_USER = 'admin_user';
 	public const ERROR_INVALID_ADMIN = 'invalid_admin';
 	public const ERROR_ALREADY_RESTRICTED = 'already_restricted';
+	public const ERROR_NOT_RESTRICTED = 'not_restricted';
 
-	/** @var array<string, bool> */
-	private array $restrictionCache = [];
+	/** @var array<string, PermissionSet|null> */
+	private array $permissionCache = [];
 
 	public function __construct(
 		private readonly RestrictedUserRepository $repository,
@@ -35,23 +37,47 @@ class RestrictedUserService {
 		private readonly IGroupManager $groupManager,
 		private readonly ITimeFactory $timeFactory,
 		private readonly TextSessionGuard $textSessionGuard,
+		private readonly PermissionSettingsService $permissionSettingsService,
 	) {
 	}
 
 	public function isRestricted(string $userId): bool {
+		$permissions = $this->getPermissionSet($userId);
+
+		return $permissions !== null && !$permissions->isFullAccess();
+	}
+
+	public function getPermissionSet(string $userId): ?PermissionSet {
 		if ($this->groupManager->isAdmin($userId)) {
-			$this->restrictionCache[$userId] = false;
+			$this->permissionCache[$userId] = null;
 
-			return false;
+			return null;
 		}
 
-		if (array_key_exists($userId, $this->restrictionCache)) {
-			return $this->restrictionCache[$userId];
+		if (array_key_exists($userId, $this->permissionCache)) {
+			return $this->permissionCache[$userId];
 		}
 
-		$this->restrictionCache[$userId] = $this->repository->existsByUserId($userId);
+		$restrictedUser = $this->repository->findByUserId($userId);
+		$this->permissionCache[$userId] = $restrictedUser instanceof RestrictedUser
+			? PermissionSet::fromMask($restrictedUser->getPermissions())
+			: null;
 
-		return $this->restrictionCache[$userId];
+		return $this->permissionCache[$userId];
+	}
+
+	/**
+	 * @return array{
+	 *     viewFiles: bool,
+	 *     writeFiles: bool,
+	 *     deleteFiles: bool,
+	 *     shareFiles: bool,
+	 *     changePassword: bool,
+	 *     fullAccess: bool,
+	 * }|null
+	 */
+	public function getPermissions(string $userId): ?array {
+		return $this->getPermissionSet($userId)?->toArray();
 	}
 
 	public function addRestrictedUser(string $userId, string $adminUserId): void {
@@ -71,7 +97,7 @@ class RestrictedUserService {
 		}
 
 		if ($this->repository->existsByUserId($canonicalUserId)) {
-			unset($this->restrictionCache[$userId], $this->restrictionCache[$canonicalUserId]);
+			unset($this->permissionCache[$userId], $this->permissionCache[$canonicalUserId]);
 			throw new DomainException(self::ERROR_ALREADY_RESTRICTED);
 		}
 
@@ -79,13 +105,16 @@ class RestrictedUserService {
 		$restrictedUser->setUserId($canonicalUserId);
 		$restrictedUser->setCreatedAt($this->timeFactory->getTime());
 		$restrictedUser->setCreatedBy($adminUserId);
+		$restrictedUser->setPermissions(
+			$this->permissionSettingsService->getDefaultPermissions()->toMask(),
+		);
 
 		try {
 			$this->repository->insert($restrictedUser);
 		} catch (Exception $exception) {
 			if ($exception->getReason() === Exception::REASON_UNIQUE_CONSTRAINT_VIOLATION
 				|| $exception->getReason() === Exception::REASON_CONSTRAINT_VIOLATION) {
-				unset($this->restrictionCache[$userId], $this->restrictionCache[$canonicalUserId]);
+				unset($this->permissionCache[$userId], $this->permissionCache[$canonicalUserId]);
 				throw new DomainException(
 					self::ERROR_ALREADY_RESTRICTED,
 					0,
@@ -96,17 +125,58 @@ class RestrictedUserService {
 			throw $exception;
 		}
 
-		unset($this->restrictionCache[$userId], $this->restrictionCache[$canonicalUserId]);
+		unset($this->permissionCache[$userId], $this->permissionCache[$canonicalUserId]);
+	}
+
+	public function updatePermissions(
+		string $userId,
+		PermissionSet $permissions,
+		string $adminUserId,
+	): void {
+		$user = $this->userManager->get($userId);
+		if (!$user instanceof IUser) {
+			throw new InvalidArgumentException(self::ERROR_INVALID_USER);
+		}
+
+		$canonicalUserId = $user->getUID();
+		if ($this->groupManager->isAdmin($canonicalUserId)) {
+			throw new InvalidArgumentException(self::ERROR_ADMIN_USER);
+		}
+
+		if (!$this->groupManager->isAdmin($adminUserId)) {
+			throw new InvalidArgumentException(self::ERROR_INVALID_ADMIN);
+		}
+
+		$restrictedUser = $this->repository->findByUserId($canonicalUserId);
+		if (!$restrictedUser instanceof RestrictedUser) {
+			unset($this->permissionCache[$userId], $this->permissionCache[$canonicalUserId]);
+			throw new DomainException(self::ERROR_NOT_RESTRICTED);
+		}
+
+		$restrictedUser->setPermissions($permissions->toMask());
+		$this->repository->update($restrictedUser);
+		unset($this->permissionCache[$userId], $this->permissionCache[$canonicalUserId]);
 	}
 
 	public function removeRestrictedUser(string $userId): void {
 		$this->repository->deleteByUserId($userId);
 		$this->textSessionGuard->forgetUser($userId);
-		unset($this->restrictionCache[$userId]);
+		unset($this->permissionCache[$userId]);
 	}
 
 	/**
-	 * @return list<array{id: string, displayName: string}>
+	 * @return list<array{
+	 *     id: string,
+	 *     displayName: string,
+	 *     permissions: array{
+	 *         viewFiles: bool,
+	 *         writeFiles: bool,
+	 *         deleteFiles: bool,
+	 *         shareFiles: bool,
+	 *         changePassword: bool,
+	 *         fullAccess: bool,
+	 *     },
+	 * }>
 	 */
 	public function getRestrictedUsers(): array {
 		$users = [];
@@ -120,22 +190,41 @@ class RestrictedUserService {
 				continue;
 			}
 
-			$users[] = $this->summarizeUser($user);
+			$users[] = $this->summarizeRestrictedUser(
+				$user,
+				PermissionSet::fromMask($restrictedUser->getPermissions()),
+			);
 		}
 
 		return $users;
 	}
 
 	/**
-	 * @return array{id: string, displayName: string}|null
+	 * @return array{
+	 *     id: string,
+	 *     displayName: string,
+	 *     permissions: array{
+	 *         viewFiles: bool,
+	 *         writeFiles: bool,
+	 *         deleteFiles: bool,
+	 *         shareFiles: bool,
+	 *         changePassword: bool,
+	 *         fullAccess: bool,
+	 *     },
+	 * }|null
 	 */
 	public function getRestrictedUser(string $userId): ?array {
 		$user = $this->userManager->get($userId);
-		if (!$user instanceof IUser || !$this->isRestricted($user->getUID())) {
+		if (!$user instanceof IUser) {
 			return null;
 		}
 
-		return $this->summarizeUser($user);
+		$permissions = $this->getPermissionSet($user->getUID());
+		if (!$permissions instanceof PermissionSet) {
+			return null;
+		}
+
+		return $this->summarizeRestrictedUser($user, $permissions);
 	}
 
 	/**
@@ -199,6 +288,27 @@ class RestrictedUserService {
 		return [
 			'id' => $user->getUID(),
 			'displayName' => $displayName !== '' ? $displayName : $user->getUID(),
+		];
+	}
+
+	/**
+	 * @return array{
+	 *     id: string,
+	 *     displayName: string,
+	 *     permissions: array{
+	 *         viewFiles: bool,
+	 *         writeFiles: bool,
+	 *         deleteFiles: bool,
+	 *         shareFiles: bool,
+	 *         changePassword: bool,
+	 *         fullAccess: bool,
+	 *     },
+	 * }
+	 */
+	private function summarizeRestrictedUser(IUser $user, PermissionSet $permissions): array {
+		return [
+			...$this->summarizeUser($user),
+			'permissions' => $permissions->toArray(),
 		];
 	}
 }
