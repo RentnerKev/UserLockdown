@@ -10,28 +10,31 @@ declare(strict_types=1);
 namespace OCA\UserLockdown\AppInfo;
 
 use OCA\DAV\Events\SabrePluginAddEvent;
-use OCA\Files\Event\LoadAdditionalScriptsEvent;
 use OCA\UserLockdown\EventListener\FileMutationRestrictionListener;
-use OCA\UserLockdown\EventListener\LoadFilesAssetsListener;
+use OCA\UserLockdown\EventListener\LoadRestrictedAssetsListener;
 use OCA\UserLockdown\EventListener\PasswordRestrictionListener;
 use OCA\UserLockdown\EventListener\SabrePluginAddListener;
 use OCA\UserLockdown\EventListener\ShareInteractionRestrictionListener;
 use OCA\UserLockdown\EventListener\ShareRestrictionListener;
+use OCA\UserLockdown\EventListener\UserCreatedListener;
 use OCA\UserLockdown\EventListener\UserDeletedListener;
 use OCA\UserLockdown\Middleware\RestrictionMiddleware;
 use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
+use OCP\AppFramework\Http\Events\BeforeTemplateRenderedEvent;
 use OCP\Files\Events\Node\BeforeNodeCopiedEvent;
 use OCP\Files\Events\Node\BeforeNodeCreatedEvent;
 use OCP\Files\Events\Node\BeforeNodeDeletedEvent;
+use OCP\Files\Events\Node\BeforeNodeReadEvent;
 use OCP\Files\Events\Node\BeforeNodeRenamedEvent;
 use OCP\Files\Events\Node\BeforeNodeTouchedEvent;
 use OCP\Files\Events\Node\BeforeNodeWrittenEvent;
 use OCP\Interaction\RestrictInteractionEvent;
 use OCP\Share\Events\BeforeShareCreatedEvent;
 use OCP\User\Events\BeforePasswordUpdatedEvent;
+use OCP\User\Events\UserCreatedEvent;
 use OCP\User\Events\UserDeletedEvent;
 
 final class Application extends App implements IBootstrap {
@@ -49,8 +52,8 @@ final class Application extends App implements IBootstrap {
 			SabrePluginAddListener::class,
 		);
 		$context->registerEventListener(
-			LoadAdditionalScriptsEvent::class,
-			LoadFilesAssetsListener::class,
+			BeforeTemplateRenderedEvent::class,
+			LoadRestrictedAssetsListener::class,
 		);
 		$context->registerEventListener(
 			BeforeShareCreatedEvent::class,
@@ -67,6 +70,10 @@ final class Application extends App implements IBootstrap {
 			PasswordRestrictionListener::class,
 		);
 		$context->registerEventListener(
+			UserCreatedEvent::class,
+			UserCreatedListener::class,
+		);
+		$context->registerEventListener(
 			UserDeletedEvent::class,
 			UserDeletedListener::class,
 		);
@@ -75,6 +82,7 @@ final class Application extends App implements IBootstrap {
 			BeforeNodeCopiedEvent::class,
 			BeforeNodeCreatedEvent::class,
 			BeforeNodeDeletedEvent::class,
+			BeforeNodeReadEvent::class,
 			BeforeNodeRenamedEvent::class,
 			BeforeNodeTouchedEvent::class,
 			BeforeNodeWrittenEvent::class,

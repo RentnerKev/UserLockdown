@@ -9,12 +9,14 @@ declare(strict_types=1);
 
 namespace OCA\UserLockdown\Service;
 
+use OCA\UserLockdown\Policy\PermissionSet;
 use OCP\IGroupManager;
 use OCP\IUserSession;
 
 final class RestrictionContext {
 	private bool $resolved = false;
 	private ?string $restrictedUserId = null;
+	private ?PermissionSet $permissionSet = null;
 
 	public function __construct(
 		private readonly IUserSession $userSession,
@@ -23,30 +25,40 @@ final class RestrictionContext {
 	) {
 	}
 
-	public function isCurrentUserRestricted(): bool {
-		return $this->getRestrictedUserId() !== null;
+	public function getRestrictedUserId(): ?string {
+		$this->resolve();
+
+		return $this->restrictedUserId;
 	}
 
-	public function getRestrictedUserId(): ?string {
+	public function getPermissionSet(): ?PermissionSet {
+		$this->resolve();
+
+		return $this->permissionSet;
+	}
+
+	private function resolve(): void {
 		if ($this->resolved) {
-			return $this->restrictedUserId;
+			return;
 		}
 
 		$user = $this->userSession->getUser();
 		if ($user === null) {
-			return null;
+			return;
 		}
 
 		$this->resolved = true;
 		$userId = $user->getUID();
 		if ($this->groupManager->isAdmin($userId)) {
-			return null;
+			return;
 		}
 
-		if ($this->restrictedUserService->isRestricted($userId)) {
-			$this->restrictedUserId = $userId;
+		$permissionSet = $this->restrictedUserService->getPermissionSet($userId);
+		if ($permissionSet === null || $permissionSet->isFullAccess()) {
+			return;
 		}
 
-		return $this->restrictedUserId;
+		$this->restrictedUserId = $userId;
+		$this->permissionSet = $permissionSet;
 	}
 }

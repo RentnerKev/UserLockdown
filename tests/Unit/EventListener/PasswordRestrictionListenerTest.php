@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace OCA\UserLockdown\Tests\Unit\EventListener;
 
 use OCA\UserLockdown\EventListener\PasswordRestrictionListener;
+use OCA\UserLockdown\Policy\PermissionSet;
 use OCA\UserLockdown\Service\RestrictedUserService;
 use OCA\UserLockdown\Service\RestrictionContext;
 use OCP\HintException;
@@ -22,7 +23,7 @@ use PHPUnit\Framework\TestCase;
 
 class PasswordRestrictionListenerTest extends TestCase {
 	public function testRestrictedUserCannotChangeOwnPassword(): void {
-		$context = $this->createRestrictionContext('alice', false, true);
+		$context = $this->createRestrictionContext('alice', false, PermissionSet::readOnly());
 		$l10n = $this->createMock(IL10N::class);
 		$l10n->expects(self::once())
 			->method('t')
@@ -41,7 +42,7 @@ class PasswordRestrictionListenerTest extends TestCase {
 	}
 
 	public function testAdministratorCanChangeRestrictedUsersPassword(): void {
-		$context = $this->createRestrictionContext('admin', true, false);
+		$context = $this->createRestrictionContext('admin', true, null);
 		$l10n = $this->createMock(IL10N::class);
 		$l10n->expects(self::never())->method('t');
 		$listener = new PasswordRestrictionListener($context, $l10n);
@@ -52,10 +53,33 @@ class PasswordRestrictionListenerTest extends TestCase {
 		self::assertSame('alice', $event->getUser()->getUID());
 	}
 
+	public function testChangePasswordPermissionAllowsOwnPasswordUpdate(): void {
+		$context = $this->createRestrictionContext(
+			'alice',
+			false,
+			PermissionSet::fromArray([
+				'viewFiles' => false,
+				'writeFiles' => false,
+				'deleteFiles' => false,
+				'shareFiles' => false,
+				'changePassword' => true,
+				'fullAccess' => false,
+			]),
+		);
+		$l10n = $this->createMock(IL10N::class);
+		$l10n->expects(self::never())->method('t');
+		$listener = new PasswordRestrictionListener($context, $l10n);
+		$event = new BeforePasswordUpdatedEvent($this->createUser('alice'), 'new-password');
+
+		$listener->handle($event);
+
+		self::assertSame('alice', $event->getUser()->getUID());
+	}
+
 	private function createRestrictionContext(
 		string $userId,
 		bool $isAdmin,
-		bool $isRestricted,
+		?PermissionSet $permissionSet,
 	): RestrictionContext {
 		$userSession = $this->createMock(IUserSession::class);
 		$userSession->method('getUser')->willReturn($this->createUser($userId));
@@ -63,9 +87,11 @@ class PasswordRestrictionListenerTest extends TestCase {
 		$groupManager->method('isAdmin')->with($userId)->willReturn($isAdmin);
 		$restrictedUserService = $this->createMock(RestrictedUserService::class);
 		if ($isAdmin) {
-			$restrictedUserService->expects(self::never())->method('isRestricted');
+			$restrictedUserService->expects(self::never())->method('getPermissionSet');
 		} else {
-			$restrictedUserService->method('isRestricted')->with($userId)->willReturn($isRestricted);
+			$restrictedUserService->method('getPermissionSet')
+				->with($userId)
+				->willReturn($permissionSet);
 		}
 
 		return new RestrictionContext($userSession, $groupManager, $restrictedUserService);

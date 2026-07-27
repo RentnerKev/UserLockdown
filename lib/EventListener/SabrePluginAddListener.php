@@ -10,14 +10,14 @@ declare(strict_types=1);
 namespace OCA\UserLockdown\EventListener;
 
 use OCA\DAV\Events\SabrePluginAddEvent;
-use OCA\UserLockdown\Dav\ReadOnlyPlugin;
+use OCA\UserLockdown\Dav\FilePermissionPlugin;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
 
 /** @implements IEventListener<SabrePluginAddEvent> */
 final class SabrePluginAddListener implements IEventListener {
 	public function __construct(
-		private readonly ReadOnlyPlugin $plugin,
+		private readonly FilePermissionPlugin $plugin,
 	) {
 	}
 

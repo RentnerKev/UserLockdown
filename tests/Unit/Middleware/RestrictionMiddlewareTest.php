@@ -11,9 +11,32 @@ namespace OCA\Files\Controller {
 	use OCP\AppFramework\Controller;
 	use OCP\IRequest;
 
+	final class ApiController extends Controller {
+		public function __construct(IRequest $request) {
+			parent::__construct('files', $request);
+		}
+	}
+
 	final class ViewController extends Controller {
 		public function __construct(IRequest $request) {
 			parent::__construct('files', $request);
+		}
+	}
+}
+
+namespace OCA\Settings\Controller {
+	use OCP\AppFramework\Controller;
+	use OCP\IRequest;
+
+	final class ChangePasswordController extends Controller {
+		public function __construct(IRequest $request) {
+			parent::__construct('settings', $request);
+		}
+	}
+
+	final class PersonalSettingsController extends Controller {
+		public function __construct(IRequest $request) {
+			parent::__construct('settings', $request);
 		}
 	}
 }
@@ -153,17 +176,21 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 	use OC\Core\Controller\CSRFTokenController;
 	use OC\Core\Controller\LostController;
 	use OC\Core\Controller\TwoFactorChallengeController;
+	use OCA\Files\Controller\ApiController;
 	use OCA\Files\Controller\ViewController;
 	use OCA\Files_Sharing\Controller\AcceptController;
 	use OCA\Files_Sharing\Controller\ShareAPIController;
 	use OCA\FirstRunWizard\Controller\WizardController;
 	use OCA\Notifications\Controller\EndpointController;
 	use OCA\Recommendations\Controller\RecommendationController;
+	use OCA\Settings\Controller\ChangePasswordController;
+	use OCA\Settings\Controller\PersonalSettingsController;
 	use OCA\Text\Controller\AttachmentController;
 	use OCA\Text\Controller\SessionController;
 	use OCA\UserLockdown\Compatibility\TextSessionGuard;
 	use OCA\UserLockdown\Exception\RestrictedActionException;
 	use OCA\UserLockdown\Middleware\RestrictionMiddleware;
+	use OCA\UserLockdown\Policy\PermissionSet;
 	use OCA\UserLockdown\Service\RestrictedUserService;
 	use OCA\UserLockdown\Service\RestrictionContext;
 	use OCA\UserStatus\Controller\HeartbeatController as UserStatusHeartbeatController;
@@ -200,6 +227,63 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 			$middleware = $this->createMiddleware('GET', '/index.php/apps/files');
 
 			$middleware->beforeController(new ViewController($this->request), 'index');
+
+			$this->addToAssertionCount(1);
+		}
+
+		public function testFilesShellRemainsAvailableWithoutViewPermission(): void {
+			$middleware = $this->createMiddleware(
+				'GET',
+				'/index.php/apps/files',
+				permissionSet: PermissionSet::blocked(),
+			);
+
+			$middleware->beforeController(new ViewController($this->request), 'index');
+
+			$this->addToAssertionCount(1);
+		}
+
+		public function testFilesShellRedirectsPasswordOnlyUserToSecuritySettings(): void {
+			$middleware = $this->createMiddleware(
+				'GET',
+				'/index.php/apps/files',
+				[],
+				['Accept' => 'text/html'],
+				permissionSet: $this->permissions(view: false, password: true),
+			);
+
+			$response = $this->handleRestriction(
+				$middleware,
+				new ViewController($this->request),
+				'index',
+			);
+
+			self::assertInstanceOf(RedirectResponse::class, $response);
+			self::assertSame('/index.php/settings/user/security', $response->getRedirectURL());
+		}
+
+		public function testFileReadControllerIsBlockedWithoutViewPermission(): void {
+			$middleware = $this->createMiddleware(
+				'GET',
+				'/index.php/apps/files/api/v1/thumbnail',
+				permissionSet: PermissionSet::blocked(),
+			);
+
+			$this->expectException(RestrictedActionException::class);
+			$middleware->beforeController(new ApiController($this->request), 'getThumbnail');
+		}
+
+		public function testFullAccessPolicyBypassesControllerRestrictions(): void {
+			$middleware = $this->createMiddleware(
+				'DELETE',
+				'/ocs/v2.php/apps/files_sharing/api/v1/shares/42',
+				permissionSet: PermissionSet::fullAccess(),
+			);
+
+			$middleware->beforeController(
+				new ShareAPIController($this->request),
+				'deleteShare',
+			);
 
 			$this->addToAssertionCount(1);
 		}
@@ -336,6 +420,54 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 				new SessionController($this->request),
 				'save',
 			);
+		}
+
+		public function testTextSessionIsBlockedWithoutViewPermission(): void {
+			$middleware = $this->createMiddleware(
+				'PUT',
+				'/index.php/apps/text/session/42/create',
+				permissionSet: PermissionSet::blocked(),
+			);
+
+			$this->expectException(RestrictedActionException::class);
+			$middleware->beforeController(
+				new SessionController($this->request, 'alice'),
+				'create',
+			);
+		}
+
+		public function testWritePermissionAllowsTextSaveAndDoesNotForceReadOnly(): void {
+			$permissionSet = $this->permissions(write: true);
+			$middleware = $this->createMiddleware(
+				'POST',
+				'/index.php/apps/text/session/42/save',
+				permissionSet: $permissionSet,
+			);
+			$controller = new SessionController($this->request, 'alice');
+
+			$middleware->beforeController($controller, 'save');
+
+			$createMiddleware = $this->createMiddleware(
+				'PUT',
+				'/index.php/apps/text/session/42/create',
+				permissionSet: $permissionSet,
+			);
+			$createController = new SessionController($this->request, 'alice');
+			$createMiddleware->beforeController($createController, 'create');
+			$response = new JSONResponse([
+				'readOnly' => false,
+				'session' => [
+					'token' => 'writer-session-token',
+					'userId' => 'alice',
+				],
+			]);
+
+			$result = $createMiddleware->afterController($createController, 'create', $response);
+
+			self::assertInstanceOf(JSONResponse::class, $result);
+			$resultData = $result->getData();
+			self::assertIsArray($resultData);
+			self::assertSame(false, $resultData['readOnly'] ?? null);
 		}
 
 		public function testAnonymousTextSessionContentPushIsBlockedForResolvedRestrictedUser(): void {
@@ -555,6 +687,26 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 			], $response->getData());
 		}
 
+		#[DataProvider('shareMutationProvider')]
+		public function testSharePermissionAllowsShareMutations(
+			string $httpMethod,
+			string $requestUri,
+			string $controllerMethod,
+		): void {
+			$middleware = $this->createMiddleware(
+				$httpMethod,
+				$requestUri,
+				permissionSet: $this->permissions(share: true),
+			);
+
+			$middleware->beforeController(
+				new ShareAPIController($this->request),
+				$controllerMethod,
+			);
+
+			$this->addToAssertionCount(1);
+		}
+
 		public function testBlockedBrowserRequestRedirectsToFiles(): void {
 			$middleware = $this->createMiddleware(
 				'GET',
@@ -571,6 +723,64 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 			self::assertSame(
 				'/index.php/apps/files',
 				$response->getRedirectURL(),
+			);
+		}
+
+		public function testPasswordOnlyBrowserRequestRedirectsToSecuritySettings(): void {
+			$middleware = $this->createMiddleware(
+				'GET',
+				'/index.php/apps/dashboard',
+				[],
+				['Accept' => 'text/html'],
+				permissionSet: $this->permissions(view: false, password: true),
+			);
+			$controller = new class('dashboard', $this->request) extends Controller {
+			};
+
+			$response = $this->handleRestriction($middleware, $controller, 'index');
+
+			self::assertInstanceOf(RedirectResponse::class, $response);
+			self::assertSame('/index.php/settings/user/security', $response->getRedirectURL());
+		}
+
+		public function testPasswordPermissionAllowsSecurityPageAndPasswordChange(): void {
+			$permissionSet = $this->permissions(view: false, password: true);
+			$settingsMiddleware = $this->createMiddleware(
+				'GET',
+				'/index.php/settings/user/security',
+				['section' => 'security'],
+				permissionSet: $permissionSet,
+			);
+			$settingsMiddleware->beforeController(
+				new PersonalSettingsController($this->request),
+				'index',
+			);
+
+			$passwordMiddleware = $this->createMiddleware(
+				'POST',
+				'/index.php/settings/personal/changepassword',
+				permissionSet: $permissionSet,
+			);
+			$passwordMiddleware->beforeController(
+				new ChangePasswordController($this->request),
+				'changePersonalPassword',
+			);
+
+			$this->addToAssertionCount(2);
+		}
+
+		public function testPasswordPermissionDoesNotAllowOtherSettingsSections(): void {
+			$middleware = $this->createMiddleware(
+				'GET',
+				'/index.php/settings/user/profile',
+				['section' => 'profile'],
+				permissionSet: $this->permissions(view: false, password: true),
+			);
+
+			$this->expectException(RestrictedActionException::class);
+			$middleware->beforeController(
+				new PersonalSettingsController($this->request),
+				'index',
 			);
 		}
 
@@ -613,6 +823,23 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 			], $response->getData());
 		}
 
+		public function testChangePasswordPermissionAllowsLostPasswordFlow(): void {
+			$permissionSet = $this->permissions(view: false, password: true);
+			$middleware = $this->createMiddleware(
+				'POST',
+				'/index.php/lostpassword/set/token/alice',
+				['userId' => 'alice'],
+				permissionSet: $permissionSet,
+			);
+
+			$middleware->beforeController(
+				new LostController($this->request),
+				'setPassword',
+			);
+
+			$this->addToAssertionCount(1);
+		}
+
 		/**
 		 * @return iterable<string, array{string, string}>
 		 */
@@ -644,6 +871,23 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 			);
 		}
 
+		private function permissions(
+			bool $view = true,
+			bool $write = false,
+			bool $delete = false,
+			bool $share = false,
+			bool $password = false,
+		): PermissionSet {
+			return PermissionSet::fromArray([
+				'viewFiles' => $view,
+				'writeFiles' => $write,
+				'deleteFiles' => $delete,
+				'shareFiles' => $share,
+				'changePassword' => $password,
+				'fullAccess' => false,
+			]);
+		}
+
 		/**
 		 * @param array<string, mixed> $params
 		 * @param array<string, string> $headers
@@ -655,7 +899,9 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 			array $headers = [],
 			?string $currentUserId = 'alice',
 			?string $rememberedTextUserId = null,
+			?PermissionSet $permissionSet = null,
 		): RestrictionMiddleware {
+			$permissionSet ??= PermissionSet::readOnly();
 			$this->request = $this->createMock(IRequest::class);
 			$this->request->method('getMethod')->willReturn($httpMethod);
 			$this->request->method('getRequestUri')->willReturn($requestUri);
@@ -666,15 +912,18 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 
 			$urlGenerator = $this->createMock(IURLGenerator::class);
 			$urlGenerator->method('linkToRoute')
-				->with('files.view.index')
-				->willReturn('/index.php/apps/files');
+				->willReturnCallback(static fn (string $route): string => match ($route) {
+					'files.view.index' => '/index.php/apps/files',
+					'settings.PersonalSettings.index' => '/index.php/settings/user/security',
+					default => throw new \RuntimeException('Unexpected route: ' . $route),
+				});
 
 			$l10n = $this->createMock(IL10N::class);
 			$l10n->method('t')->willReturnCallback(static fn (string $text): string => $text);
 
 			$this->userManager = $this->createMock(IUserManager::class);
 			$this->restrictedUserService = $this->createMock(RestrictedUserService::class);
-			$this->restrictedUserService->method('isRestricted')->willReturn(true);
+			$this->restrictedUserService->method('getPermissionSet')->willReturn($permissionSet);
 
 			$userSession = $this->createMock(IUserSession::class);
 			$groupManager = $this->createMock(IGroupManager::class);

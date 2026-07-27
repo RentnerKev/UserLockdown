@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace OCA\UserLockdown\Tests\Unit\EventListener;
 
 use OCA\UserLockdown\EventListener\ShareRestrictionListener;
+use OCA\UserLockdown\Policy\PermissionSet;
 use OCA\UserLockdown\Service\RestrictedUserService;
 use OCA\UserLockdown\Service\RestrictionContext;
 use OCP\IGroupManager;
@@ -22,7 +23,7 @@ use PHPUnit\Framework\TestCase;
 
 class ShareRestrictionListenerTest extends TestCase {
 	public function testRestrictedUserCannotCreateShare(): void {
-		$context = $this->createRestrictionContext('alice', false, true);
+		$context = $this->createRestrictionContext('alice', PermissionSet::readOnly());
 		$l10n = $this->createMock(IL10N::class);
 		$l10n->expects(self::once())
 			->method('t')
@@ -37,19 +38,39 @@ class ShareRestrictionListenerTest extends TestCase {
 		self::assertTrue($event->isPropagationStopped());
 	}
 
+	public function testSharePermissionAllowsShareCreation(): void {
+		$context = $this->createRestrictionContext('alice', PermissionSet::fromArray([
+			'viewFiles' => true,
+			'writeFiles' => false,
+			'deleteFiles' => false,
+			'shareFiles' => true,
+			'changePassword' => false,
+			'fullAccess' => false,
+		]));
+		$l10n = $this->createMock(IL10N::class);
+		$l10n->expects(self::never())->method('t');
+		$listener = new ShareRestrictionListener($context, $l10n);
+		$event = new BeforeShareCreatedEvent($this->createMock(IShare::class));
+
+		$listener->handle($event);
+
+		self::assertFalse($event->isPropagationStopped());
+	}
+
 	private function createRestrictionContext(
 		string $userId,
-		bool $isAdmin,
-		bool $isRestricted,
+		PermissionSet $permissionSet,
 	): RestrictionContext {
 		$user = $this->createMock(IUser::class);
 		$user->method('getUID')->willReturn($userId);
 		$userSession = $this->createMock(IUserSession::class);
 		$userSession->method('getUser')->willReturn($user);
 		$groupManager = $this->createMock(IGroupManager::class);
-		$groupManager->method('isAdmin')->with($userId)->willReturn($isAdmin);
+		$groupManager->method('isAdmin')->with($userId)->willReturn(false);
 		$restrictedUserService = $this->createMock(RestrictedUserService::class);
-		$restrictedUserService->method('isRestricted')->with($userId)->willReturn($isRestricted);
+		$restrictedUserService->method('getPermissionSet')
+			->with($userId)
+			->willReturn($permissionSet);
 
 		return new RestrictionContext($userSession, $groupManager, $restrictedUserService);
 	}

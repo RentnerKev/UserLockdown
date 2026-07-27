@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace OCA\UserLockdown\Tests\Unit\Service;
 
+use OCA\UserLockdown\Policy\PermissionSet;
 use OCA\UserLockdown\Service\RestrictedUserService;
 use OCA\UserLockdown\Service\RestrictionContext;
 use OCP\IGroupManager;
@@ -51,13 +52,14 @@ class RestrictionContextTest extends TestCase {
 			->method('isAdmin')
 			->with('alice')
 			->willReturn(false);
+		$permissionSet = PermissionSet::readOnly();
 		$this->restrictedUserService->expects(self::once())
-			->method('isRestricted')
+			->method('getPermissionSet')
 			->with('alice')
-			->willReturn(true);
+			->willReturn($permissionSet);
 
 		self::assertSame('alice', $this->context->getRestrictedUserId());
-		self::assertTrue($this->context->isCurrentUserRestricted());
+		self::assertSame($permissionSet, $this->context->getPermissionSet());
 		self::assertSame('alice', $this->context->getRestrictedUserId());
 	}
 
@@ -71,10 +73,9 @@ class RestrictionContextTest extends TestCase {
 			->with('admin')
 			->willReturn(true);
 		$this->restrictedUserService->expects(self::never())
-			->method('isRestricted');
+			->method('getPermissionSet');
 
 		self::assertNull($this->context->getRestrictedUserId());
-		self::assertFalse($this->context->isCurrentUserRestricted());
 	}
 
 	public function testUnrestrictedUserReturnsNoRestrictedUserId(): void {
@@ -87,25 +88,23 @@ class RestrictionContextTest extends TestCase {
 			->with('bob')
 			->willReturn(false);
 		$this->restrictedUserService->expects(self::once())
-			->method('isRestricted')
+			->method('getPermissionSet')
 			->with('bob')
-			->willReturn(false);
+			->willReturn(null);
 
 		self::assertNull($this->context->getRestrictedUserId());
-		self::assertFalse($this->context->isCurrentUserRestricted());
 	}
 
 	public function testMissingUserSessionReturnsNoRestrictedUserId(): void {
-		$this->userSession->expects(self::exactly(2))
+		$this->userSession->expects(self::once())
 			->method('getUser')
 			->willReturn(null);
 		$this->groupManager->expects(self::never())
 			->method('isAdmin');
 		$this->restrictedUserService->expects(self::never())
-			->method('isRestricted');
+			->method('getPermissionSet');
 
 		self::assertNull($this->context->getRestrictedUserId());
-		self::assertFalse($this->context->isCurrentUserRestricted());
 	}
 
 	public function testUserResolvedLaterInRequestIsStillRestricted(): void {
@@ -118,12 +117,25 @@ class RestrictionContextTest extends TestCase {
 			->with('alice')
 			->willReturn(false);
 		$this->restrictedUserService->expects(self::once())
-			->method('isRestricted')
+			->method('getPermissionSet')
 			->with('alice')
-			->willReturn(true);
+			->willReturn(PermissionSet::readOnly());
 
 		self::assertNull($this->context->getRestrictedUserId());
 		self::assertSame('alice', $this->context->getRestrictedUserId());
+	}
+
+	public function testFullAccessPolicyIsAnEffectiveBypass(): void {
+		$user = $this->createUser('alice');
+		$this->userSession->method('getUser')->willReturn($user);
+		$this->groupManager->method('isAdmin')->with('alice')->willReturn(false);
+		$this->restrictedUserService->expects(self::once())
+			->method('getPermissionSet')
+			->with('alice')
+			->willReturn(PermissionSet::fullAccess());
+
+		self::assertNull($this->context->getPermissionSet());
+		self::assertNull($this->context->getRestrictedUserId());
 	}
 
 	/**

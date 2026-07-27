@@ -12,6 +12,8 @@ namespace OCA\UserLockdown\Middleware;
 use Exception;
 use OCA\UserLockdown\Compatibility\TextSessionGuard;
 use OCA\UserLockdown\Exception\RestrictedActionException;
+use OCA\UserLockdown\Policy\Permission;
+use OCA\UserLockdown\Policy\PermissionSet;
 use OCA\UserLockdown\Service\RestrictedUserService;
 use OCA\UserLockdown\Service\RestrictionContext;
 use OCP\AppFramework\Controller;
@@ -28,8 +30,13 @@ use OCP\IUser;
 use OCP\IUserManager;
 
 final class RestrictionMiddleware extends Middleware {
+	private const CHANGE_PASSWORD_CONTROLLER = 'OCA\\Settings\\Controller\\ChangePasswordController';
+	private const FILES_CONTROLLER_PREFIX = 'OCA\\Files\\Controller\\';
+	private const FILES_VIEW_CONTROLLER = 'OCA\\Files\\Controller\\ViewController';
 	private const LOST_PASSWORD_CONTROLLER = 'OC\\Core\\Controller\\LostController';
 	private const LOGOUT_CONTROLLER = 'OC\\Core\\Controller\\LoginController';
+	private const PERSONAL_SETTINGS_CONTROLLER = 'OCA\\Settings\\Controller\\PersonalSettingsController';
+	private const SHARE_CONTROLLER_PREFIX = 'OCA\\Files_Sharing\\Controller\\';
 	private const TEXT_ATTACHMENT_CONTROLLER = 'OCA\\Text\\Controller\\AttachmentController';
 	private const TEXT_SESSION_CONTROLLER = 'OCA\\Text\\Controller\\SessionController';
 
@@ -181,19 +188,20 @@ final class RestrictionMiddleware extends Middleware {
 	public function beforeController(Controller $controller, string $methodName): void {
 		$controllerClass = $controller::class;
 
-		if (
-			$controllerClass === self::LOST_PASSWORD_CONTROLLER
-			&& $this->isRestrictedLostPasswordTarget($methodName)
-		) {
-			if ($methodName === 'email') {
-				throw new RestrictedActionException(
-					true,
-					$this->l10n->t('This action has been disabled by your administrator.'),
-					true,
-				);
+		if ($controllerClass === self::LOST_PASSWORD_CONTROLLER) {
+			if ($this->isBlockedLostPasswordTarget($methodName)) {
+				if ($methodName === 'email') {
+					throw new RestrictedActionException(
+						true,
+						$this->l10n->t('This action has been disabled by your administrator.'),
+						true,
+					);
+				}
+
+				throw $this->restrictedAction($methodName !== 'resetform');
 			}
 
-			throw $this->restrictedAction($methodName !== 'resetform');
+			return;
 		}
 
 		if (
@@ -208,15 +216,25 @@ final class RestrictionMiddleware extends Middleware {
 				throw $this->restrictedAction(true);
 			}
 
-			if (
-				$textSessionUserId !== null
-				&& $this->restrictedUserService->isRestricted($textSessionUserId)
-			) {
+			if ($textSessionUserId !== null) {
+				$textPermissionSet = $this->getEffectivePermissionSet($textSessionUserId);
+				if ($textPermissionSet === null) {
+					return;
+				}
+
+				$canView = $textPermissionSet->allows(Permission::ViewFiles);
+				$canWrite = $textPermissionSet->allows(Permission::WriteFiles);
+				if ($methodName === 'close') {
+					return;
+				}
+
 				if (
-					$this->isAllowedStatefulReadOnlyController($controllerClass, $methodName)
-					|| $this->isTextReadOnlyPush($controllerClass, $methodName)
+					($canWrite && $this->isTextTokenMutation($controllerClass, $methodName))
+					|| ($canView && $this->isTextReadOnlyPush($controllerClass, $methodName))
+					|| ($canView && $this->isAllowedStatefulReadOnlyController($controllerClass, $methodName))
 					|| (
-						$this->isAllowedReadOnlyController($controllerClass, $methodName)
+						$canView
+						&& $this->isAllowedReadOnlyController($controllerClass, $methodName)
 						&& in_array(strtoupper($this->request->getMethod()), self::SAFE_HTTP_METHODS, true)
 					)
 				) {
@@ -224,13 +242,15 @@ final class RestrictionMiddleware extends Middleware {
 				}
 
 				$this->discardRestrictedTextPush
-					= $controllerClass === self::TEXT_SESSION_CONTROLLER
+					= $canView
+					&& $controllerClass === self::TEXT_SESSION_CONTROLLER
 					&& $methodName === 'push';
 				throw $this->restrictedAction(true);
 			}
 		}
 
-		if (!$this->restrictionContext->isCurrentUserRestricted()) {
+		$permissionSet = $this->restrictionContext->getPermissionSet();
+		if ($permissionSet === null) {
 			return;
 		}
 
@@ -245,13 +265,66 @@ final class RestrictionMiddleware extends Middleware {
 			return;
 		}
 
-		if ($this->isAllowedReadOnlyController($controllerClass, $methodName)) {
-			if (in_array(strtoupper($this->request->getMethod()), self::SAFE_HTTP_METHODS, true)) {
-				return;
-			}
+		if (
+			$controllerClass === self::CHANGE_PASSWORD_CONTROLLER
+			&& $methodName === 'changePersonalPassword'
+			&& $permissionSet->allows(Permission::ChangePassword)
+		) {
+			return;
 		}
 
-		if ($this->isAllowedStatefulReadOnlyController($controllerClass, $methodName)) {
+		if (
+			$controllerClass === self::PERSONAL_SETTINGS_CONTROLLER
+			&& $methodName === 'index'
+			&& $this->isSecuritySettingsRequest()
+			&& $permissionSet->allows(Permission::ChangePassword)
+		) {
+			return;
+		}
+
+		if (
+			$controllerClass === self::FILES_VIEW_CONTROLLER
+			&& $methodName === 'index'
+			&& !$permissionSet->allows(Permission::ViewFiles)
+			&& $permissionSet->allows(Permission::ChangePassword)
+		) {
+			throw $this->restrictedAction(false);
+		}
+
+		if ($controllerClass === self::FILES_VIEW_CONTROLLER && $methodName === 'index') {
+			return;
+		}
+
+		$httpMethod = strtoupper($this->request->getMethod());
+		$isSafeRequest = in_array($httpMethod, self::SAFE_HTTP_METHODS, true);
+		if (
+			$isSafeRequest
+			&& $permissionSet->allows(Permission::ViewFiles)
+			&& $this->isAllowedReadOnlyController($controllerClass, $methodName)
+		) {
+			return;
+		}
+
+		if (
+			$permissionSet->allows(Permission::ViewFiles)
+			&& $this->isAllowedStatefulReadOnlyController($controllerClass, $methodName)
+		) {
+			return;
+		}
+
+		if (
+			!$isSafeRequest
+			&& str_starts_with($controllerClass, self::SHARE_CONTROLLER_PREFIX)
+			&& $permissionSet->allows(Permission::ShareFiles)
+		) {
+			return;
+		}
+
+		if (
+			!$isSafeRequest
+			&& str_starts_with($controllerClass, self::FILES_CONTROLLER_PREFIX)
+			&& $permissionSet->allows(Permission::WriteFiles)
+		) {
 			return;
 		}
 
@@ -300,8 +373,11 @@ final class RestrictionMiddleware extends Middleware {
 				&& is_string($sessionUserId)
 			) {
 				$this->textSessionGuard->remember($sessionToken, $sessionUserId);
-				$sessionIsRestricted = $this->restrictedUserService->isRestricted($sessionUserId);
-				if ($sessionIsRestricted) {
+				$permissionSet = $this->getEffectivePermissionSet($sessionUserId);
+				if (
+					$permissionSet !== null
+					&& !$permissionSet->allows(Permission::WriteFiles)
+				) {
 					$data['readOnly'] = true;
 					$response->setData($data);
 				}
@@ -322,7 +398,11 @@ final class RestrictionMiddleware extends Middleware {
 			$this->getTextSessionToken(),
 			$textSessionUserId,
 		);
-		if ($this->restrictedUserService->isRestricted($textSessionUserId)) {
+		$permissionSet = $this->getEffectivePermissionSet($textSessionUserId);
+		if (
+			$permissionSet !== null
+			&& !$permissionSet->allows(Permission::WriteFiles)
+		) {
 			$data['readOnly'] = true;
 			$response->setData($data);
 		}
@@ -372,6 +452,18 @@ final class RestrictionMiddleware extends Middleware {
 			return $response;
 		}
 
+		$permissionSet = $this->restrictionContext->getPermissionSet();
+		if (
+			$permissionSet !== null
+			&& !$permissionSet->allows(Permission::ViewFiles)
+			&& $permissionSet->allows(Permission::ChangePassword)
+		) {
+			return new RedirectResponse($this->urlGenerator->linkToRoute(
+				'settings.PersonalSettings.index',
+				['section' => 'security'],
+			));
+		}
+
 		return new RedirectResponse($this->urlGenerator->linkToRoute('files.view.index'));
 	}
 
@@ -418,6 +510,23 @@ final class RestrictionMiddleware extends Middleware {
 	): bool {
 		$allowedMethods = self::STATEFUL_READ_ONLY_CONTROLLER_METHODS[$controllerClass] ?? [];
 		return in_array($methodName, $allowedMethods, true);
+	}
+
+	private function getEffectivePermissionSet(string $userId): ?PermissionSet {
+		$permissionSet = $this->restrictedUserService->getPermissionSet($userId);
+
+		return $permissionSet === null || $permissionSet->isFullAccess()
+			? null
+			: $permissionSet;
+	}
+
+	private function isSecuritySettingsRequest(): bool {
+		$section = $this->request->getParam('section');
+		if (!is_string($section)) {
+			$section = $this->request->getParam('sectionId');
+		}
+
+		return $section === 'security';
 	}
 
 	private function getTextSessionUserId(Controller $controller): ?string {
@@ -500,7 +609,7 @@ final class RestrictionMiddleware extends Middleware {
 		return str_contains($accept, 'json') || $requestedWith === 'xmlhttprequest';
 	}
 
-	private function isRestrictedLostPasswordTarget(string $methodName): bool {
+	private function isBlockedLostPasswordTarget(string $methodName): bool {
 		if ($methodName === 'email') {
 			$input = $this->request->getParam('user');
 			if (!is_string($input)) {
@@ -514,7 +623,7 @@ final class RestrictionMiddleware extends Middleware {
 
 			$user = $this->userManager->get($input);
 			if ($user instanceof IUser) {
-				return $this->restrictedUserService->isRestricted($user->getUID());
+				return $this->isPasswordChangeBlocked($user->getUID());
 			}
 
 			$enabledMatches = array_values(array_filter(
@@ -523,7 +632,7 @@ final class RestrictionMiddleware extends Middleware {
 			));
 
 			return count($enabledMatches) === 1
-				&& $this->restrictedUserService->isRestricted($enabledMatches[0]->getUID());
+				&& $this->isPasswordChangeBlocked($enabledMatches[0]->getUID());
 		}
 
 		if ($methodName !== 'resetform' && $methodName !== 'setPassword') {
@@ -537,6 +646,13 @@ final class RestrictionMiddleware extends Middleware {
 
 		$user = $this->userManager->get($userId);
 		$canonicalUserId = $user instanceof IUser ? $user->getUID() : $userId;
-		return $this->restrictedUserService->isRestricted($canonicalUserId);
+		return $this->isPasswordChangeBlocked($canonicalUserId);
+	}
+
+	private function isPasswordChangeBlocked(string $userId): bool {
+		$permissionSet = $this->getEffectivePermissionSet($userId);
+
+		return $permissionSet !== null
+			&& !$permissionSet->allows(Permission::ChangePassword);
 	}
 }

@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace OCA\UserLockdown\EventListener;
 
+use OCA\UserLockdown\Policy\Permission;
 use OCA\UserLockdown\Service\RestrictionContext;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
@@ -30,7 +31,13 @@ final class PasswordRestrictionListener implements IEventListener {
 		}
 
 		$actorId = $this->restrictionContext->getRestrictedUserId();
-		if ($actorId === null || $event->getUser()->getUID() !== $actorId) {
+		$permissionSet = $this->restrictionContext->getPermissionSet();
+		if (
+			$actorId === null
+			|| $permissionSet === null
+			|| $permissionSet->allows(Permission::ChangePassword)
+			|| $event->getUser()->getUID() !== $actorId
+		) {
 			return;
 		}
 

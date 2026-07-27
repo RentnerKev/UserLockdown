@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace OCA\UserLockdown\EventListener;
 
+use OCA\UserLockdown\Policy\Permission;
 use OCA\UserLockdown\Service\RestrictionContext;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
@@ -30,10 +31,12 @@ final class ShareInteractionRestrictionListener implements IEventListener {
 	}
 
 	public function handle(Event $event): void {
+		$permissionSet = $this->restrictionContext->getPermissionSet();
 		if (
 			!$event instanceof RestrictInteractionEvent
 			|| !$event->action instanceof ShareAction
-			|| !$this->restrictionContext->isCurrentUserRestricted()
+			|| $permissionSet === null
+			|| $permissionSet->allows(Permission::ShareFiles)
 		) {
 			return;
 		}
