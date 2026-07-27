@@ -15,6 +15,12 @@ on:
       release_tag:
         required: true
         type: string
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing GitHub release tag to rebuild
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -47,11 +53,14 @@ jobs:
           ref: ${{ inputs.release_tag }}
 
       - name: Resolve release metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
 
           node <<'NODE'
+          const { execFileSync } = require('node:child_process')
           const fs = require('node:fs')
 
           const environmentPath = process.env.GITHUB_ENV
@@ -61,8 +70,9 @@ jobs:
           }
 
           const releaseTag = process.env.RELEASE_TAG
-          const prerelease = process.env.RELEASE_PRERELEASE
-          const publishedAt = process.env.RELEASE_PUBLISHED_AT
+          let prerelease = process.env.RELEASE_PRERELEASE
+          let previousReleaseTag = process.env.PREVIOUS_RELEASE_TAG
+          let publishedAt = process.env.RELEASE_PUBLISHED_AT
 
           if (
             typeof releaseTag !== 'string' ||
@@ -70,6 +80,65 @@ jobs:
             /[\r\n]/.test(releaseTag)
           ) {
             throw new Error('Workflow input contains no valid release tag')
+          }
+
+          if (process.env.GITHUB_EVENT_NAME === 'workflow_dispatch') {
+            const repository = process.env.GITHUB_REPOSITORY
+
+            if (
+              typeof repository !== 'string' ||
+              !/^[^/\r\n]+\/[^/\r\n]+$/.test(repository)
+            ) {
+              throw new Error('GitHub repository is unavailable')
+            }
+
+            const release = JSON.parse(
+              execFileSync(
+                'gh',
+                [
+                  'release',
+                  'view',
+                  releaseTag,
+                  '--repo',
+                  repository,
+                  '--json',
+                  'isPrerelease,publishedAt',
+                ],
+                { encoding: 'utf8' },
+              ),
+            )
+            const releases = JSON.parse(
+              execFileSync(
+                'gh',
+                [
+                  'release',
+                  'list',
+                  '--exclude-drafts',
+                  '--limit',
+                  '1000',
+                  '--repo',
+                  repository,
+                  '--json',
+                  'isPrerelease,publishedAt,tagName',
+                ],
+                { encoding: 'utf8' },
+              ),
+            )
+
+            prerelease = String(release.isPrerelease)
+            publishedAt = release.publishedAt
+            const publishedAtTimestamp = Date.parse(publishedAt)
+            previousReleaseTag = releases
+              .filter(
+                (candidate) =>
+                  candidate.tagName !== releaseTag &&
+                  Date.parse(candidate.publishedAt) < publishedAtTimestamp &&
+                  (release.isPrerelease || !candidate.isPrerelease),
+              )
+              .sort(
+                (left, right) =>
+                  Date.parse(right.publishedAt) - Date.parse(left.publishedAt),
+              )[0]?.tagName ?? ''
           }
 
           if (prerelease !== 'true' && prerelease !== 'false') {
@@ -93,6 +162,9 @@ jobs:
           fs.appendFileSync(
             environmentPath,
             [
+              `PREVIOUS_RELEASE_TAG=${previousReleaseTag}`,
+              `RELEASE_PRERELEASE=${prerelease}`,
+              `RELEASE_PUBLISHED_AT=${publishedAt}`,
               `RELEASE_PUBLISHED_DATE=${publishedDate}`,
               '',
             ].join('\n'),
@@ -160,7 +232,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          release_commit="$(git rev-parse --verify "${RELEASE_TAG}^{commit}")"
+          release_ref="refs/tags/${RELEASE_TAG}"
+          git show-ref --verify --quiet "${release_ref}"
+          release_commit="$(git rev-parse --verify "${release_ref}^{commit}")"
           previous_tag="${PREVIOUS_RELEASE_TAG}"
 
           mapfile -t collocated_tags < <(git tag --points-at "${release_commit}")
@@ -176,11 +250,14 @@ jobs:
             previous_ref="refs/tags/${previous_tag}"
             git check-ref-format "${previous_ref}"
             git show-ref --verify --quiet "${previous_ref}"
-            commit_range="${previous_tag}..${RELEASE_TAG}"
+            previous_commit="$(
+              git rev-parse --verify "${previous_ref}^{commit}"
+            )"
+            commit_range="${previous_commit}..${release_commit}"
             printf 'Generating changelog for %s (%s).\n' \
-              "${RELEASE_TAG}" "${commit_range}"
+              "${RELEASE_TAG}" "${previous_tag}..${RELEASE_TAG}"
           else
-            commit_range="${RELEASE_TAG}"
+            commit_range="${release_commit}"
             printf 'Generating initial changelog for %s.\n' "${RELEASE_TAG}"
           fi
 
