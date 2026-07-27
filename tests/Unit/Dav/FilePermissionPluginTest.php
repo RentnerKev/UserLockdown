@@ -359,6 +359,7 @@ class FilePermissionPluginTest extends TestCase {
 			'deleteFiles' => $delete,
 			'shareFiles' => false,
 			'changePassword' => false,
+			'hideSideNavigation' => false,
 			'fullAccess' => false,
 		]);
 	}

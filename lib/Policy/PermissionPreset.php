@@ -45,6 +45,7 @@ final readonly class PermissionPreset {
 	 *         deleteFiles: bool,
 	 *         shareFiles: bool,
 	 *         changePassword: bool,
+	 *         hideSideNavigation: bool,
 	 *         fullAccess: bool,
 	 *     },
 	 * }

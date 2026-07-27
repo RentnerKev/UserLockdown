@@ -45,6 +45,7 @@ class ShareRestrictionListenerTest extends TestCase {
 			'deleteFiles' => false,
 			'shareFiles' => true,
 			'changePassword' => false,
+			'hideSideNavigation' => false,
 			'fullAccess' => false,
 		]));
 		$l10n = $this->createMock(IL10N::class);

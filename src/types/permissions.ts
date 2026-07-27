@@ -12,6 +12,7 @@ export const permissionKeys = [
   'deleteFiles',
   'shareFiles',
   'changePassword',
+  'hideSideNavigation',
   'fullAccess',
 ] as const satisfies readonly (keyof PermissionSet)[]
 
@@ -21,6 +22,7 @@ export const readOnlyPermissions: PermissionSet = {
   deleteFiles: false,
   shareFiles: false,
   changePassword: false,
+  hideSideNavigation: false,
   fullAccess: false,
 }
 
@@ -32,6 +34,7 @@ export const canonicalizePermissions = (permissions: PermissionSet): PermissionS
       deleteFiles: true,
       shareFiles: true,
       changePassword: true,
+      hideSideNavigation: false,
       fullAccess: true,
     }
   }
@@ -42,6 +45,7 @@ export const canonicalizePermissions = (permissions: PermissionSet): PermissionS
       writeFiles: false,
       deleteFiles: false,
       shareFiles: false,
+      hideSideNavigation: false,
       fullAccess: false,
     }
   }

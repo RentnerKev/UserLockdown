@@ -12,10 +12,12 @@ namespace OCA\UserLockdown\Policy;
 use InvalidArgumentException;
 
 final readonly class PermissionSet {
-	private const ALL_MASK = 63;
+	private const ALL_ACCESS_MASK = 63;
+	private const KNOWN_MASK = self::ALL_ACCESS_MASK | Permission::HideSideNavigation->value;
 	private const FILE_DEPENDENT_MASK = Permission::WriteFiles->value
 		| Permission::DeleteFiles->value
-		| Permission::ShareFiles->value;
+		| Permission::ShareFiles->value
+		| Permission::HideSideNavigation->value;
 
 	/** @var list<string> */
 	private const API_KEYS = [
@@ -24,6 +26,7 @@ final readonly class PermissionSet {
 		'deleteFiles',
 		'shareFiles',
 		'changePassword',
+		'hideSideNavigation',
 		'fullAccess',
 	];
 
@@ -60,6 +63,7 @@ final readonly class PermissionSet {
 				$permissions['writeFiles']
 				|| $permissions['deleteFiles']
 				|| $permissions['shareFiles']
+				|| $permissions['hideSideNavigation']
 			)
 		) {
 			throw new InvalidArgumentException('invalid_permissions');
@@ -76,7 +80,7 @@ final readonly class PermissionSet {
 	}
 
 	public static function fromMask(int $mask): self {
-		if ($mask < 0 || ($mask & ~self::ALL_MASK) !== 0) {
+		if ($mask < 0 || ($mask & ~self::KNOWN_MASK) !== 0) {
 			return self::blocked();
 		}
 
@@ -103,7 +107,7 @@ final readonly class PermissionSet {
 	}
 
 	public static function fullAccess(): self {
-		return new self(self::ALL_MASK);
+		return new self(self::ALL_ACCESS_MASK);
 	}
 
 	public function allows(Permission $permission): bool {
@@ -121,6 +125,7 @@ final readonly class PermissionSet {
 	 *     deleteFiles: bool,
 	 *     shareFiles: bool,
 	 *     changePassword: bool,
+	 *     hideSideNavigation: bool,
 	 *     fullAccess: bool,
 	 * }
 	 */
@@ -131,6 +136,7 @@ final readonly class PermissionSet {
 			'deleteFiles' => $this->allows(Permission::DeleteFiles),
 			'shareFiles' => $this->allows(Permission::ShareFiles),
 			'changePassword' => $this->allows(Permission::ChangePassword),
+			'hideSideNavigation' => $this->allows(Permission::HideSideNavigation),
 			'fullAccess' => $this->allows(Permission::FullAccess),
 		];
 	}
@@ -146,6 +152,7 @@ final readonly class PermissionSet {
 			'deleteFiles' => Permission::DeleteFiles,
 			'shareFiles' => Permission::ShareFiles,
 			'changePassword' => Permission::ChangePassword,
+			'hideSideNavigation' => Permission::HideSideNavigation,
 			'fullAccess' => Permission::FullAccess,
 			default => throw new InvalidArgumentException('invalid_permissions'),
 		};

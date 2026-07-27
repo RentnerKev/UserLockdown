@@ -1,5 +1,6 @@
 import { loadState } from '@nextcloud/initial-state'
 import { translate as t } from '@nextcloud/l10n'
+import { generateUrl } from '@nextcloud/router'
 
 import { permissionSetSchema } from './schemas/api'
 import {
@@ -74,7 +75,46 @@ const shareBlockedSelectors = [
 
 const accountBlockedSelectors = ['#header-menu-user-menu a[href*="/settings/user/security"]']
 
+const sideNavigationSelectors = [
+  '#app-navigation-vue',
+  '#app-navigation',
+  '[data-cy-files-navigation]',
+  '[data-cy-files-navigation-toggle]',
+  '.files-navigation',
+  '.app-navigation',
+  '.app-navigation-toggle',
+  '.app-navigation-toggle-wrapper',
+]
+
+type NavigationLocation = Pick<Location, 'href' | 'origin' | 'replace'>
+
+type FilesRoute = 'all-files' | 'other-files-view' | 'outside-files'
+
 const normalizeText = (value: string): string => value.replace(/\s+/g, ' ').trim()
+
+const normalizePath = (path: string): string => path.replace(/\/+$/, '') || '/'
+
+const getFilesRoute = (navigationLocation: NavigationLocation): FilesRoute => {
+  const currentPath = normalizePath(new URL(navigationLocation.href).pathname)
+  const filesPath = '/apps/files'
+  const filesPathIndex = currentPath.lastIndexOf(filesPath)
+  if (filesPathIndex < 0) {
+    return 'outside-files'
+  }
+
+  const routedPath = currentPath.slice(filesPathIndex)
+  if (routedPath !== filesPath && !routedPath.startsWith(`${filesPath}/`)) {
+    return 'outside-files'
+  }
+
+  const allFilesPath = `${filesPath}/files`
+
+  if (routedPath === allFilesPath || routedPath.startsWith(`${allFilesPath}/`)) {
+    return 'all-files'
+  }
+
+  return 'other-files-view'
+}
 
 const hideElements = (
   root: ParentNode,
@@ -97,6 +137,14 @@ const hideElements = (
     target.hidden = true
     target.setAttribute('data-user-lockdown-hidden', 'true')
   })
+}
+
+const restoreElements = (hiddenElements: Map<HTMLElement, boolean>): void => {
+  hiddenElements.forEach((wasHidden, element) => {
+    element.hidden = wasHidden
+    element.removeAttribute('data-user-lockdown-hidden')
+  })
+  hiddenElements.clear()
 }
 
 const hideReadOnlyNotifications = (
@@ -132,7 +180,10 @@ const loadPermissions = (): PermissionSet => {
   )
 }
 
-export const initializeFilesLockdown = (permissions: PermissionSet): (() => void) => {
+export const initializeFilesLockdown = (
+  permissions: PermissionSet,
+  navigationLocation: NavigationLocation = window.location,
+): (() => void) => {
   const canonicalPermissions = canonicalizePermissions(permissions)
   if (canonicalPermissions.fullAccess) {
     return () => undefined
@@ -164,7 +215,37 @@ export const initializeFilesLockdown = (permissions: PermissionSet): (() => void
 
   document.documentElement.classList.add(...rootClasses)
   const hiddenElements = new Map<HTMLElement, boolean>()
+  const hiddenSideNavigation = new Map<HTMLElement, boolean>()
+  let redirectingToAllFiles = false
+
+  const updateSideNavigation = () => {
+    if (!canonicalPermissions.hideSideNavigation) {
+      return
+    }
+
+    const filesRoute = getFilesRoute(navigationLocation)
+    const hideNavigation = filesRoute !== 'outside-files'
+    document.documentElement.classList.toggle('user-lockdown-hide-files-navigation', hideNavigation)
+
+    if (hideNavigation) {
+      hideElements(document, sideNavigationSelectors, hiddenSideNavigation)
+    } else {
+      restoreElements(hiddenSideNavigation)
+    }
+
+    if (filesRoute === 'other-files-view') {
+      if (!redirectingToAllFiles) {
+        redirectingToAllFiles = true
+        navigationLocation.replace(generateUrl('/apps/files/files'))
+      }
+      return
+    }
+
+    redirectingToAllFiles = false
+  }
+
   const scan = () => {
+    updateSideNavigation()
     hideElements(document, blockedSelectors, hiddenElements)
     if (!canonicalPermissions.writeFiles) {
       hideReadOnlyNotifications(document, hiddenElements)
@@ -188,17 +269,20 @@ export const initializeFilesLockdown = (permissions: PermissionSet): (() => void
   })
 
   observer.observe(document.body, { childList: true, subtree: true })
+  window.addEventListener('popstate', scan)
+  window.addEventListener('hashchange', scan)
 
   return () => {
     observer.disconnect()
+    window.removeEventListener('popstate', scan)
+    window.removeEventListener('hashchange', scan)
     if (scanFrameId !== null) {
       window.cancelAnimationFrame(scanFrameId)
     }
     document.documentElement.classList.remove(...rootClasses)
-    hiddenElements.forEach((wasHidden, element) => {
-      element.hidden = wasHidden
-      element.removeAttribute('data-user-lockdown-hidden')
-    })
+    document.documentElement.classList.remove('user-lockdown-hide-files-navigation')
+    restoreElements(hiddenElements)
+    restoreElements(hiddenSideNavigation)
   }
 }
 

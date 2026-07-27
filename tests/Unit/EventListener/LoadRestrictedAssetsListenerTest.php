@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace OCA\UserLockdown\Tests\Unit\EventListener;
 
 use OCA\UserLockdown\EventListener\LoadRestrictedAssetsListener;
+use OCA\UserLockdown\Policy\Permission;
 use OCA\UserLockdown\Policy\PermissionSet;
 use OCA\UserLockdown\Service\RestrictedAssetLoader;
 use OCA\UserLockdown\Service\RestrictedUserService;
@@ -24,7 +25,9 @@ use PHPUnit\Framework\TestCase;
 
 class LoadRestrictedAssetsListenerTest extends TestCase {
 	public function testProvidesPermissionsForLoggedInRestrictedUser(): void {
-		$permissionSet = PermissionSet::readOnly();
+		$permissionSet = PermissionSet::fromMask(
+			Permission::ViewFiles->value | Permission::HideSideNavigation->value,
+		);
 		$initialState = $this->createMock(IInitialState::class);
 		$initialState->expects(self::once())
 			->method('provideInitialState')

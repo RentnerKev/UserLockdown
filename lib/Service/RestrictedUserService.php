@@ -73,6 +73,7 @@ class RestrictedUserService {
 	 *     deleteFiles: bool,
 	 *     shareFiles: bool,
 	 *     changePassword: bool,
+	 *     hideSideNavigation: bool,
 	 *     fullAccess: bool,
 	 * }|null
 	 */
@@ -174,6 +175,7 @@ class RestrictedUserService {
 	 *         deleteFiles: bool,
 	 *         shareFiles: bool,
 	 *         changePassword: bool,
+	 *         hideSideNavigation: bool,
 	 *         fullAccess: bool,
 	 *     },
 	 * }>
@@ -209,6 +211,7 @@ class RestrictedUserService {
 	 *         deleteFiles: bool,
 	 *         shareFiles: bool,
 	 *         changePassword: bool,
+	 *         hideSideNavigation: bool,
 	 *         fullAccess: bool,
 	 *     },
 	 * }|null
@@ -301,6 +304,7 @@ class RestrictedUserService {
 	 *         deleteFiles: bool,
 	 *         shareFiles: bool,
 	 *         changePassword: bool,
+	 *         hideSideNavigation: bool,
 	 *         fullAccess: bool,
 	 *     },
 	 * }

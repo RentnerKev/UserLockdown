@@ -39,6 +39,7 @@ const blockedPermissions: PermissionSet = {
   deleteFiles: false,
   shareFiles: false,
   changePassword: false,
+  hideSideNavigation: false,
   fullAccess: false,
 }
 
@@ -58,6 +59,7 @@ const fullAccessPermissions: PermissionSet = {
   deleteFiles: true,
   shareFiles: true,
   changePassword: true,
+  hideSideNavigation: false,
   fullAccess: true,
 }
 
@@ -285,14 +287,38 @@ describe('User Lockdown admin app', () => {
     expect(await screen.findByText(/default permissions saved/i)).toBeVisible()
   })
 
+  it('saves hidden Files navigation as part of the default permissions', async () => {
+    const user = userEvent.setup()
+    renderApp()
+
+    await user.click(
+      await screen.findByRole('checkbox', {
+        name: /hide Files navigation/i,
+      }),
+    )
+    await user.click(screen.getByRole('button', { name: /save defaults/i }))
+
+    await waitFor(() =>
+      expect(updateDefaultPermissions).toHaveBeenCalledWith({
+        ...readOnlyPermissions,
+        hideSideNavigation: true,
+      }),
+    )
+  })
+
   it('canonicalizes dependent and full-access permissions in the editor', async () => {
     const user = userEvent.setup()
     renderApp()
 
     const viewFiles = await screen.findByRole('checkbox', { name: /view and download files/i })
     const writeFiles = screen.getByRole('checkbox', { name: /create and edit files/i })
+    const hideSideNavigation = screen.getByRole('checkbox', { name: /hide Files navigation/i })
+    await user.click(hideSideNavigation)
+    expect(hideSideNavigation).toBeChecked()
     await user.click(viewFiles)
     expect(writeFiles).toBeDisabled()
+    expect(hideSideNavigation).not.toBeChecked()
+    expect(hideSideNavigation).toBeDisabled()
 
     await user.click(screen.getByRole('checkbox', { name: /normal user.*full access/i }))
     expect(viewFiles).toBeChecked()
@@ -316,10 +342,14 @@ describe('User Lockdown admin app', () => {
       within(dialog).getByRole('combobox', { name: /apply preset/i }),
       'builtin:file-editor',
     )
+    await user.click(within(dialog).getByRole('checkbox', { name: /hide Files navigation/i }))
     await user.click(within(dialog).getByRole('button', { name: /save permissions/i }))
 
     await waitFor(() =>
-      expect(updateRestrictedUser).toHaveBeenCalledWith('alice', fileEditorPermissions),
+      expect(updateRestrictedUser).toHaveBeenCalledWith('alice', {
+        ...fileEditorPermissions,
+        hideSideNavigation: true,
+      }),
     )
     expect(screen.queryByRole('dialog', { name: /edit permissions/i })).not.toBeInTheDocument()
   })
@@ -370,12 +400,17 @@ describe('User Lockdown admin app', () => {
     await user.clear(nameInput)
     await user.type(nameInput, 'Guest access')
     await user.click(within(dialog).getByRole('checkbox', { name: /change own password/i }))
+    await user.click(within(dialog).getByRole('checkbox', { name: /hide Files navigation/i }))
     await user.click(within(dialog).getByRole('button', { name: /save preset/i }))
 
     await waitFor(() =>
       expect(createPreset).toHaveBeenCalledWith({
         name: 'Guest access',
-        permissions: { ...readOnlyPermissions, changePassword: true },
+        permissions: {
+          ...readOnlyPermissions,
+          changePassword: true,
+          hideSideNavigation: true,
+        },
       }),
     )
     expect(screen.queryByRole('dialog', { name: /create preset/i })).not.toBeInTheDocument()

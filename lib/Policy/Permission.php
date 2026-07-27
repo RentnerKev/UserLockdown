@@ -16,4 +16,5 @@ enum Permission: int {
 	case ShareFiles = 8;
 	case ChangePassword = 16;
 	case FullAccess = 32;
+	case HideSideNavigation = 64;
 }

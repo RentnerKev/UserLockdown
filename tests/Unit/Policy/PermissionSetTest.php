@@ -23,6 +23,7 @@ class PermissionSetTest extends TestCase {
 			'deleteFiles' => true,
 			'shareFiles' => false,
 			'changePassword' => true,
+			'hideSideNavigation' => false,
 			'fullAccess' => false,
 		]);
 
@@ -41,6 +42,7 @@ class PermissionSetTest extends TestCase {
 			'deleteFiles' => false,
 			'shareFiles' => false,
 			'changePassword' => false,
+			'hideSideNavigation' => true,
 			'fullAccess' => true,
 		]);
 
@@ -51,6 +53,7 @@ class PermissionSetTest extends TestCase {
 			'deleteFiles' => true,
 			'shareFiles' => true,
 			'changePassword' => true,
+			'hideSideNavigation' => false,
 			'fullAccess' => true,
 		], $permissions->toArray());
 	}
@@ -74,6 +77,7 @@ class PermissionSetTest extends TestCase {
 			'deleteFiles' => false,
 			'shareFiles' => false,
 			'changePassword' => false,
+			'hideSideNavigation' => false,
 		]];
 		yield 'unknown key' => [[
 			...$readOnly,
@@ -98,6 +102,11 @@ class PermissionSetTest extends TestCase {
 			'viewFiles' => false,
 			'shareFiles' => true,
 		]];
+		yield 'hidden navigation without view' => [[
+			...$readOnly,
+			'viewFiles' => false,
+			'hideSideNavigation' => true,
+		]];
 	}
 
 	#[DataProvider('invalidStoredMaskProvider')]
@@ -108,16 +117,36 @@ class PermissionSetTest extends TestCase {
 	/** @return iterable<string, array{int}> */
 	public static function invalidStoredMaskProvider(): iterable {
 		yield 'negative' => [-1];
-		yield 'unknown bit' => [64];
+		yield 'unknown bit' => [128];
 		yield 'write without view' => [Permission::WriteFiles->value];
 		yield 'delete without view' => [Permission::DeleteFiles->value];
 		yield 'share without view' => [Permission::ShareFiles->value];
+		yield 'hidden navigation without view' => [Permission::HideSideNavigation->value];
+	}
+
+	public function testHiddenSideNavigationIsStoredIndependentlyFromFileAccess(): void {
+		$permissions = PermissionSet::fromMask(
+			Permission::ViewFiles->value | Permission::HideSideNavigation->value,
+		);
+
+		self::assertSame(65, $permissions->toMask());
+		self::assertTrue($permissions->allows(Permission::ViewFiles));
+		self::assertTrue($permissions->allows(Permission::HideSideNavigation));
+		self::assertFalse($permissions->isFullAccess());
 	}
 
 	public function testStoredFullAccessBitNormalizesEveryPermission(): void {
 		$permissions = PermissionSet::fromMask(Permission::FullAccess->value);
 
 		self::assertSame(PermissionSet::fullAccess()->toArray(), $permissions->toArray());
+		self::assertSame(63, $permissions->toMask());
+	}
+
+	public function testStoredFullAccessCanonicalizesHiddenNavigationToBypass(): void {
+		$permissions = PermissionSet::fromMask(127);
+
+		self::assertSame(PermissionSet::fullAccess()->toArray(), $permissions->toArray());
+		self::assertFalse($permissions->allows(Permission::HideSideNavigation));
 		self::assertSame(63, $permissions->toMask());
 	}
 }

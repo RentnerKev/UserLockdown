@@ -173,6 +173,7 @@ final class RestrictionMiddleware extends Middleware {
 	];
 
 	private bool $discardRestrictedTextPush = false;
+	private bool $redirectToAllFiles = false;
 
 	public function __construct(
 		private readonly IRequest $request,
@@ -263,6 +264,11 @@ final class RestrictionMiddleware extends Middleware {
 
 		if ($this->isAllowedAuthenticationController($controllerClass, $methodName)) {
 			return;
+		}
+
+		if ($this->shouldRedirectToAllFiles($controllerClass, $methodName, $permissionSet)) {
+			$this->redirectToAllFiles = true;
+			throw $this->restrictedAction(false);
 		}
 
 		if (
@@ -464,6 +470,14 @@ final class RestrictionMiddleware extends Middleware {
 			));
 		}
 
+		if ($this->redirectToAllFiles) {
+			$this->redirectToAllFiles = false;
+			return new RedirectResponse($this->urlGenerator->linkToRoute(
+				'files.view.indexView',
+				['view' => 'files'],
+			));
+		}
+
 		return new RedirectResponse($this->urlGenerator->linkToRoute('files.view.index'));
 	}
 
@@ -502,6 +516,29 @@ final class RestrictionMiddleware extends Middleware {
 	): bool {
 		$allowedMethods = self::AUTHENTICATION_CONTROLLER_METHODS[$controllerClass] ?? [];
 		return in_array($methodName, $allowedMethods, true);
+	}
+
+	private function shouldRedirectToAllFiles(
+		string $controllerClass,
+		string $methodName,
+		PermissionSet $permissionSet,
+	): bool {
+		if (
+			$controllerClass !== self::FILES_VIEW_CONTROLLER
+			|| !$permissionSet->allows(Permission::HideSideNavigation)
+		) {
+			return false;
+		}
+
+		if ($methodName === 'index') {
+			return true;
+		}
+
+		if ($methodName !== 'indexView' && $methodName !== 'indexViewFileid') {
+			return false;
+		}
+
+		return $this->request->getParam('view') !== 'files';
 	}
 
 	private function isAllowedStatefulReadOnlyController(

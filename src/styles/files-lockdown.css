@@ -41,6 +41,26 @@
   display: none !important;
 }
 
+.user-lockdown-hide-files-navigation #app-navigation-vue,
+.user-lockdown-hide-files-navigation #app-navigation,
+.user-lockdown-hide-files-navigation [data-cy-files-navigation],
+.user-lockdown-hide-files-navigation [data-cy-files-navigation-toggle],
+.user-lockdown-hide-files-navigation .files-navigation,
+.user-lockdown-hide-files-navigation .app-navigation,
+.user-lockdown-hide-files-navigation .app-navigation-toggle,
+.user-lockdown-hide-files-navigation .app-navigation-toggle-wrapper {
+  display: none !important;
+}
+
+.user-lockdown-hide-files-navigation #app-content-vue,
+.user-lockdown-hide-files-navigation #app-content,
+.user-lockdown-hide-files-navigation .files-app-content {
+  flex: 1 1 auto !important;
+  margin-inline-start: 0 !important;
+  max-width: none !important;
+  width: 100% !important;
+}
+
 .user-lockdown-deny-account #header-menu-user-menu .header-menu__content {
   min-height: 0 !important;
 }

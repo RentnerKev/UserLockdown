@@ -100,6 +100,23 @@ class PermissionSettingsServiceTest extends TestCase {
 			['id' => 'builtin:password-only', 'name' => 'Password only', 'builtIn' => true, 'permissions' => PermissionSet::fromMask(16)->toArray()],
 			['id' => 'builtin:normal-user', 'name' => 'Normal user', 'builtIn' => true, 'permissions' => PermissionSet::fullAccess()->toArray()],
 		], $presets);
+		foreach ($presets as $preset) {
+			self::assertFalse($preset['permissions']['hideSideNavigation']);
+		}
+	}
+
+	public function testHiddenNavigationIsPersistedInDefaultsAndCustomPresets(): void {
+		$permissions = PermissionSet::fromMask(
+			Permission::ViewFiles->value | Permission::HideSideNavigation->value,
+		);
+
+		$this->service->setDefaultPermissions($permissions);
+		$preset = $this->service->createCustomPreset('Files only', $permissions);
+
+		self::assertSame(65, $this->defaultMask);
+		self::assertSame($permissions->toArray(), $this->service->getDefaultPermissions()->toArray());
+		self::assertSame(65, $preset->getPermissions()->toMask());
+		self::assertSame(65, $this->storedPresets['permission_preset_0000000000000001']['permissions']);
 	}
 
 	public function testCustomPresetIsStoredAsPolicySnapshot(): void {

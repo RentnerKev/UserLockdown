@@ -10,13 +10,21 @@ const permissions = (overrides: Partial<PermissionSet> = {}): PermissionSet => (
   deleteFiles: false,
   shareFiles: false,
   changePassword: false,
+  hideSideNavigation: false,
   fullAccess: false,
   ...overrides,
 })
 
 const renderFilesInterface = () => {
   document.body.innerHTML = `
-    <main>
+    <nav id="app-navigation-vue" class="app-navigation" data-cy-files-navigation>
+      <a href="/apps/files/files">All files</a>
+      <a href="/apps/files/recent">Recent</a>
+    </nav>
+    <div class="app-navigation-toggle-wrapper" data-cy-files-navigation-toggle>
+      <button class="app-navigation-toggle">Navigation</button>
+    </div>
+    <main id="app-content-vue" class="files-app-content">
       <div data-cy-files-list>
         <div data-cy-files-list-row>Report.pdf</div>
       </div>
@@ -64,6 +72,7 @@ afterEach(() => {
   stopLockdown = undefined
   document.documentElement.className = ''
   document.body.innerHTML = ''
+  window.history.replaceState({}, '', '/')
 })
 
 describe('restricted Files interface', () => {
@@ -121,6 +130,82 @@ describe('restricted Files interface', () => {
     expect(document.getElementById('logout-entry')).toBeVisible()
   })
 
+  it('hides the Files navigation in All files while leaving the file list visible', async () => {
+    window.history.replaceState({}, '', '/apps/files/files?dir=/Documents')
+    renderFilesInterface()
+    await startWithPermissions(permissions({ hideSideNavigation: true }))
+
+    expect(document.documentElement).toHaveClass('user-lockdown-hide-files-navigation')
+    expect(document.getElementById('app-navigation-vue')).not.toBeVisible()
+    expect(document.querySelector('.app-navigation-toggle-wrapper')).not.toBeVisible()
+    expect(document.querySelector('[data-cy-files-list]')).toBeVisible()
+
+    const lateNavigation = document.createElement('nav')
+    lateNavigation.className = 'files-navigation'
+    document.body.append(lateNavigation)
+    await waitFor(() => expect(lateNavigation).not.toBeVisible())
+
+    stopLockdown?.()
+    stopLockdown = undefined
+    expect(document.documentElement).not.toHaveClass('user-lockdown-hide-files-navigation')
+    expect(document.getElementById('app-navigation-vue')).toBeVisible()
+    expect(document.querySelector('.app-navigation-toggle-wrapper')).toBeVisible()
+  })
+
+  it('recognizes All files behind a webroot and index.php', async () => {
+    renderFilesInterface()
+    const lockdown = await startWithPermissions(permissions())
+    lockdown.stopFilesLockdown()
+    const replace = vi.fn()
+
+    stopLockdown = lockdown.initializeFilesLockdown(permissions({ hideSideNavigation: true }), {
+      href: 'https://cloud.example/nextcloud/index.php/apps/files/files?dir=/Documents',
+      origin: 'https://cloud.example',
+      replace,
+    })
+
+    expect(document.documentElement).toHaveClass('user-lockdown-hide-files-navigation')
+    expect(document.getElementById('app-navigation-vue')).not.toBeVisible()
+    expect(replace).not.toHaveBeenCalled()
+  })
+
+  it('redirects other Files views to All files once', async () => {
+    renderFilesInterface()
+    const lockdown = await startWithPermissions(permissions())
+    lockdown.stopFilesLockdown()
+    const replace = vi.fn()
+
+    stopLockdown = lockdown.initializeFilesLockdown(permissions({ hideSideNavigation: true }), {
+      href: 'https://cloud.example/apps/files/recent',
+      origin: 'https://cloud.example',
+      replace,
+    })
+
+    expect(replace).toHaveBeenCalledOnce()
+    expect(replace).toHaveBeenCalledWith('/apps/files/files')
+    expect(document.documentElement).toHaveClass('user-lockdown-hide-files-navigation')
+    expect(document.getElementById('app-navigation-vue')).not.toBeVisible()
+
+    document.body.append(document.createElement('div'))
+    await waitFor(() => expect(replace).toHaveBeenCalledOnce())
+  })
+
+  it('does not hide non-Files navigation or redirect account settings', async () => {
+    renderFilesInterface()
+    const lockdown = await startWithPermissions(permissions())
+    lockdown.stopFilesLockdown()
+    const replace = vi.fn()
+
+    stopLockdown = lockdown.initializeFilesLockdown(permissions({ hideSideNavigation: true }), {
+      href: 'https://cloud.example/settings/user/security',
+      origin: 'https://cloud.example',
+      replace,
+    })
+
+    expect(replace).not.toHaveBeenCalled()
+    expect(document.getElementById('app-navigation-vue')).toBeVisible()
+  })
+
   it('does not modify the interface for full access', async () => {
     renderFilesInterface()
     await startWithPermissions(
@@ -130,6 +215,7 @@ describe('restricted Files interface', () => {
         deleteFiles: true,
         shareFiles: true,
         changePassword: true,
+        hideSideNavigation: true,
         fullAccess: true,
       }),
     )

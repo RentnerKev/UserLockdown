@@ -243,6 +243,72 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 			$this->addToAssertionCount(1);
 		}
 
+		public function testHiddenNavigationRedirectsFilesRootToAllFiles(): void {
+			$middleware = $this->createMiddleware(
+				'GET',
+				'/index.php/apps/files',
+				[],
+				['Accept' => 'text/html'],
+				permissionSet: $this->permissions(hideSideNavigation: true),
+			);
+
+			$response = $this->handleRestriction(
+				$middleware,
+				new ViewController($this->request),
+				'index',
+			);
+
+			self::assertInstanceOf(RedirectResponse::class, $response);
+			self::assertSame('/index.php/apps/files/files', $response->getRedirectURL());
+		}
+
+		/** @return iterable<string, array{string, string}> */
+		public static function alternativeFilesViewProvider(): iterable {
+			yield 'recent files' => ['indexView', 'recent'];
+			yield 'favorites' => ['indexView', 'favorites'];
+			yield 'shares' => ['indexView', 'shares'];
+			yield 'trash file' => ['indexViewFileid', 'trashbin'];
+		}
+
+		#[DataProvider('alternativeFilesViewProvider')]
+		public function testHiddenNavigationRedirectsAlternativeFilesViews(
+			string $controllerMethod,
+			string $view,
+		): void {
+			$middleware = $this->createMiddleware(
+				'GET',
+				'/index.php/apps/files/' . $view,
+				['view' => $view],
+				['Accept' => 'text/html'],
+				permissionSet: $this->permissions(hideSideNavigation: true),
+			);
+
+			$response = $this->handleRestriction(
+				$middleware,
+				new ViewController($this->request),
+				$controllerMethod,
+			);
+
+			self::assertInstanceOf(RedirectResponse::class, $response);
+			self::assertSame('/index.php/apps/files/files', $response->getRedirectURL());
+		}
+
+		public function testHiddenNavigationAllowsCanonicalAllFilesView(): void {
+			$middleware = $this->createMiddleware(
+				'GET',
+				'/index.php/apps/files/files',
+				['view' => 'files'],
+				permissionSet: $this->permissions(hideSideNavigation: true),
+			);
+
+			$middleware->beforeController(
+				new ViewController($this->request),
+				'indexView',
+			);
+
+			$this->addToAssertionCount(1);
+		}
+
 		public function testFilesShellRedirectsPasswordOnlyUserToSecuritySettings(): void {
 			$middleware = $this->createMiddleware(
 				'GET',
@@ -724,6 +790,17 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 				'/index.php/apps/files',
 				$response->getRedirectURL(),
 			);
+
+			$safeShellMiddleware = $this->createMiddleware(
+				'GET',
+				$response->getRedirectURL(),
+				permissionSet: PermissionSet::blocked(),
+			);
+			$safeShellMiddleware->beforeController(
+				new ViewController($this->request),
+				'index',
+			);
+			$this->addToAssertionCount(1);
 		}
 
 		public function testPasswordOnlyBrowserRequestRedirectsToSecuritySettings(): void {
@@ -877,6 +954,7 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 			bool $delete = false,
 			bool $share = false,
 			bool $password = false,
+			bool $hideSideNavigation = false,
 		): PermissionSet {
 			return PermissionSet::fromArray([
 				'viewFiles' => $view,
@@ -884,6 +962,7 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 				'deleteFiles' => $delete,
 				'shareFiles' => $share,
 				'changePassword' => $password,
+				'hideSideNavigation' => $hideSideNavigation,
 				'fullAccess' => false,
 			]);
 		}
@@ -912,7 +991,10 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 
 			$urlGenerator = $this->createMock(IURLGenerator::class);
 			$urlGenerator->method('linkToRoute')
-				->willReturnCallback(static fn (string $route): string => match ($route) {
+				->willReturnCallback(static fn (string $route, array $parameters = []): string => match ($route) {
+					'files.view.indexView' => $parameters === ['view' => 'files']
+						? '/index.php/apps/files/files'
+						: throw new \RuntimeException('Unexpected files route parameters.'),
 					'files.view.index' => '/index.php/apps/files',
 					'settings.PersonalSettings.index' => '/index.php/settings/user/security',
 					default => throw new \RuntimeException('Unexpected route: ' . $route),

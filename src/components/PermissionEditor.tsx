@@ -37,6 +37,15 @@ export const PermissionEditor = ({
       description: t('user_lockdown', 'Open folders and download existing files.'),
     },
     {
+      key: 'hideSideNavigation',
+      label: t('user_lockdown', 'Hide Files navigation'),
+      description: t(
+        'user_lockdown',
+        'Hide the Files sidebar and keep the user in the All files view.',
+      ),
+      requiresFiles: true,
+    },
+    {
       key: 'writeFiles',
       label: t('user_lockdown', 'Create and edit files'),
       description: t(

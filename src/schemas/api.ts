@@ -6,6 +6,7 @@ export const permissionSetSchema = z.object({
   deleteFiles: z.boolean(),
   shareFiles: z.boolean(),
   changePassword: z.boolean(),
+  hideSideNavigation: z.boolean(),
   fullAccess: z.boolean(),
 })
 

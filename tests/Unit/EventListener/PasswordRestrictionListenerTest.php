@@ -63,6 +63,7 @@ class PasswordRestrictionListenerTest extends TestCase {
 				'deleteFiles' => false,
 				'shareFiles' => false,
 				'changePassword' => true,
+				'hideSideNavigation' => false,
 				'fullAccess' => false,
 			]),
 		);
