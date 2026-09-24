@@ -21,7 +21,7 @@
     "noEmit": true,
     "tsBuildInfoFile": "./node_modules/.cache/tsconfig.app.tsbuildinfo",
     "jsx": "react-jsx",
-    "types": ["vitest/globals", "@testing-library/jest-dom"],
+    "types": ["vitest/globals", "@testing-library/jest-dom", "vite/client"]
   },
-  "include": ["src", "tests/frontend"],
+  "include": ["src", "tests/frontend"]
 }

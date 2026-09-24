@@ -181,18 +181,18 @@ export const PermissionSettings = ({ settings }: PermissionSettingsProps) => {
                 <button
                   className="user-lockdown-button user-lockdown-button--secondary"
                   type="button"
+                  aria-label={`${t('user_lockdown', 'Edit')} ${preset.name}`}
                   onClick={() => setPresetDialog(preset)}
                 >
                   {t('user_lockdown', 'Edit')}
-                  <span className="user-lockdown-visually-hidden"> {preset.name}</span>
                 </button>
                 <button
                   className="user-lockdown-button user-lockdown-button--secondary"
                   type="button"
+                  aria-label={`${t('user_lockdown', 'Delete')} ${preset.name}`}
                   onClick={() => setDeletePreset(preset)}
                 >
                   {t('user_lockdown', 'Delete')}
-                  <span className="user-lockdown-visually-hidden"> {preset.name}</span>
                 </button>
               </span>
             )}

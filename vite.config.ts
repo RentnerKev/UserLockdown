@@ -16,7 +16,7 @@ export default defineConfig(({ mode }) => {
       outDir: '.',
       emptyOutDir: false,
       cssCodeSplit: false,
-      minify: 'esbuild',
+      minify: 'oxc',
       sourcemap: false,
       lib: {
         entry: resolve(
@@ -28,10 +28,9 @@ export default defineConfig(({ mode }) => {
         fileName: () => `js/user-lockdown-${entryName}.js`,
         cssFileName: `user-lockdown-${entryName}`,
       },
-      rollupOptions: {
+      rolldownOptions: {
         output: {
           assetFileNames: 'css/[name][extname]',
-          inlineDynamicImports: true,
         },
       },
     },

@@ -89,18 +89,18 @@ export const RestrictedUserList = ({ users, presets }: RestrictedUserListProps) 
                   <button
                     className="user-lockdown-button user-lockdown-button--secondary"
                     type="button"
+                    aria-label={`${t('user_lockdown', 'Edit')} ${user.displayName}`}
                     onClick={() => setEditUser(user)}
                   >
                     {t('user_lockdown', 'Edit')}
-                    <span className="user-lockdown-visually-hidden"> {user.displayName}</span>
                   </button>
                   <button
                     className="user-lockdown-button user-lockdown-button--secondary"
                     type="button"
+                    aria-label={`${t('user_lockdown', 'Remove')} ${user.displayName}`}
                     onClick={() => openDialog(user)}
                   >
                     {t('user_lockdown', 'Remove')}
-                    <span className="user-lockdown-visually-hidden"> {user.displayName}</span>
                   </button>
                 </span>
               </li>

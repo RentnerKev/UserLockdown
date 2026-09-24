@@ -153,7 +153,7 @@ preset does not modify users that previously received it.
 
 ## Local development
 
-Requirements: Docker with Compose, Bun 1.2 or newer, and optionally Composer 2
+Requirements: Docker with Compose, Bun 1.4.2 or newer, and optionally Composer 2
 plus PHP 8.2–8.5.
 
 ```console

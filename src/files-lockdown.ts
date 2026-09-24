@@ -119,7 +119,7 @@ const getFilesRoute = (navigationLocation: NavigationLocation): FilesRoute => {
 const hideElements = (
   root: ParentNode,
   selectors: readonly string[],
-  hiddenElements: Map<HTMLElement, boolean>,
+  hiddenElements: Map<HTMLElement, HTMLElement['hidden']>,
 ): void => {
   if (selectors.length === 0) {
     return
@@ -139,7 +139,7 @@ const hideElements = (
   })
 }
 
-const restoreElements = (hiddenElements: Map<HTMLElement, boolean>): void => {
+const restoreElements = (hiddenElements: Map<HTMLElement, HTMLElement['hidden']>): void => {
   hiddenElements.forEach((wasHidden, element) => {
     element.hidden = wasHidden
     element.removeAttribute('data-user-lockdown-hidden')
@@ -149,7 +149,7 @@ const restoreElements = (hiddenElements: Map<HTMLElement, boolean>): void => {
 
 const hideReadOnlyNotifications = (
   root: ParentNode,
-  hiddenElements: Map<HTMLElement, boolean>,
+  hiddenElements: Map<HTMLElement, HTMLElement['hidden']>,
 ): void => {
   const messages = new Set([
     normalizeText(textReadOnlyNotification),
@@ -214,8 +214,8 @@ export const initializeFilesLockdown = (
   }
 
   document.documentElement.classList.add(...rootClasses)
-  const hiddenElements = new Map<HTMLElement, boolean>()
-  const hiddenSideNavigation = new Map<HTMLElement, boolean>()
+  const hiddenElements = new Map<HTMLElement, HTMLElement['hidden']>()
+  const hiddenSideNavigation = new Map<HTMLElement, HTMLElement['hidden']>()
   let redirectingToAllFiles = false
 
   const updateSideNavigation = () => {
