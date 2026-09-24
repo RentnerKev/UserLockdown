@@ -37,7 +37,7 @@ bun run build
 
 For PHP changes, run `composer validate --strict`, `composer install`,
 `composer cs:check`, `composer phpstan`, and `composer test`. GitHub Actions runs
-these checks on PHP 8.2–8.5 and the integration suite on Nextcloud 32–34.
+these checks on PHP 8.2–8.5 and the integration suite on Nextcloud 32–35.
 The required CI checks and a code-owner review must pass before a contributor's
 pull request can be merged.
 

@@ -11,14 +11,14 @@ body:
     id: app-version
     attributes:
       label: User Lockdown version
-      placeholder: "e.g. 1.1.0"
+      placeholder: "e.g. 1.2.0"
     validations:
       required: true
   - type: input
     id: nextcloud-version
     attributes:
       label: Nextcloud version
-      placeholder: "e.g. 34.0.0"
+      placeholder: "e.g. 35.0.0"
     validations:
       required: true
   - type: textarea

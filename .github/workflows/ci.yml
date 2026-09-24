@@ -57,7 +57,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        nextcloud-version: ['32', '33', '34']
+        nextcloud-version: ['32', '33', '34', '35']
     env:
       NEXTCLOUD_IMAGE: nextcloud:${{ matrix.nextcloud-version }}-apache
     steps:

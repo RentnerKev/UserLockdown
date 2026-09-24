@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  NEXTCLOUD_IMAGE: nextcloud:34-apache
+  NEXTCLOUD_IMAGE: nextcloud:35-apache
 
 jobs:
   verify:

@@ -35,7 +35,7 @@ services:
       - '8025:8025'
 
   nextcloud:
-    image: ${NEXTCLOUD_IMAGE:-nextcloud:34-apache}
+    image: ${NEXTCLOUD_IMAGE:-nextcloud:35-apache}
     restart: unless-stopped
     ports:
       - '${NEXTCLOUD_PORT:-8080}:80'
@@ -70,7 +70,7 @@ services:
       - ./:/var/www/html/custom_apps/user_lockdown:rw
 
   bootstrap:
-    image: ${NEXTCLOUD_IMAGE:-nextcloud:34-apache}
+    image: ${NEXTCLOUD_IMAGE:-nextcloud:35-apache}
     restart: 'no'
     depends_on:
       nextcloud:

@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="https://github.com/RentnerKev/UserLockdown/actions/workflows/ci.yml"><img src="https://github.com/RentnerKev/UserLockdown/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
-  <img src="https://img.shields.io/badge/Nextcloud-32--34-0082C9?logo=nextcloud&logoColor=white" alt="Nextcloud 32 to 34">
+  <img src="https://img.shields.io/badge/Nextcloud-32--35-0082C9?logo=nextcloud&logoColor=white" alt="Nextcloud 32 to 35">
   <img src="https://img.shields.io/badge/PHP-8.2--8.5-777BB4?logo=php&logoColor=white" alt="PHP 8.2 to 8.5">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0--or--later-663399" alt="AGPL 3.0 or later"></a>
 </p>
@@ -26,7 +26,7 @@ full access. Reusable presets and configurable default permissions make recurrin
 policies quick to apply. An optional focused-files mode hides the Files sidebar
 and keeps the account in **All files**.
 
-Version 1.1.0 supports Nextcloud 32–34 and PHP 8.2–8.5. Existing users from
+Version 1.2.0 supports Nextcloud 32–35 and PHP 8.2–8.5. Existing users from
 version 1.0.0 keep their previous read-only behavior after the update.
 
 ## See it in action

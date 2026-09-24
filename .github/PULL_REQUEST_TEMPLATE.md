@@ -9,7 +9,7 @@ Link an issue if one exists (for example, `Closes #123`).
 ## Validation
 
 List the commands you ran and their results. CI runs frontend checks, the PHP 8.2–8.5
-matrix, and the Nextcloud 32–34 integration matrix.
+matrix, and the Nextcloud 32–35 integration matrix.
 
 ## Checklist
 
