@@ -49,17 +49,9 @@ assert_status() {
 	description="$2"
 	shift 2
 
-	response_file="$temporary_dir/assert-status-response"
-	headers_file="$temporary_dir/assert-status-headers"
-	actual="$(curl --silent --show-error --dump-header "$headers_file" --output "$response_file" --write-out '%{http_code}' "$@")"
+	actual="$(curl --silent --show-error --output "$null_device" --write-out '%{http_code}' "$@")"
 	if [ "$actual" != "$expected" ]; then
 		printf '%s\n' "$description: expected HTTP $expected, got $actual" >&2
-		sed -n '/^[Cc]ontent-[Tt]ype:/p' "$headers_file" >&2
-		bun -e 'const raw = await Bun.stdin.text(); try { const response = JSON.parse(raw); console.error("Response fields: " + JSON.stringify({keys: Object.keys(response), ocsMeta: response.ocs?.meta, error: response.error})) } catch { console.error("Response length: " + raw.length + ", first bytes: " + Array.from(new TextEncoder().encode(raw.slice(0, 32))).map((byte) => byte.toString(16).padStart(2, "0")).join("")) }' < "$response_file"
-		if [ "$description" = 'Share creation is blocked' ]; then
-			share_count="$(docker compose exec -T db psql -U nextcloud -d nextcloud -tAc "SELECT count(*) FROM oc_share WHERE uid_owner = 'restricted';")"
-			printf '%s\n' "Shares owned by restricted user: $share_count" >&2
-		fi
 		exit 1
 	fi
 
@@ -157,6 +149,12 @@ assert_status 403 'Share creation is blocked' \
 	--data-urlencode 'path=/read-only.txt' \
 	--data-urlencode 'shareType=3' \
 	"$base_url/ocs/v2.php/apps/files_sharing/api/v1/shares?format=json"
+share_count="$(docker compose exec -T db psql -U nextcloud -d nextcloud -tAc "SELECT count(*) FROM oc_share WHERE uid_owner = 'restricted';")"
+if [ "$share_count" != '0' ]; then
+	printf '%s\n' "Blocked user created $share_count share(s)." >&2
+	exit 1
+fi
+printf '%s\n' 'Blocked user has created no shares.'
 
 mail_before="$(mail_total)"
 reset_response="$temporary_dir/reset-response"

@@ -200,6 +200,7 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 	use OCP\AppFramework\Http\DataResponse;
 	use OCP\AppFramework\Http\JSONResponse;
 	use OCP\AppFramework\Http\RedirectResponse;
+	use OCP\AppFramework\OCS\OCSForbiddenException;
 	use OCP\AppFramework\Utility\ITimeFactory;
 	use OCP\IAppConfig;
 	use OCP\IGroupManager;
@@ -726,7 +727,7 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 		}
 
 		#[DataProvider('shareMutationProvider')]
-		public function testBlockedShareMutationReturnsForbiddenJson(
+		public function testBlockedShareMutationUsesOcsForbiddenException(
 			string $httpMethod,
 			string $requestUri,
 			string $controllerMethod,
@@ -737,20 +738,9 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 			);
 			$controller = new ShareAPIController($this->request);
 
-			$response = $this->handleRestriction(
-				$middleware,
-				$controller,
-				$controllerMethod,
-			);
-
-			self::assertInstanceOf(JSONResponse::class, $response);
-			self::assertSame(Http::STATUS_FORBIDDEN, $response->getStatus());
-			self::assertSame([
-				'error' => [
-					'code' => 'user_restricted',
-					'message' => 'This action has been disabled by your administrator.',
-				],
-			], $response->getData());
+			$this->expectException(OCSForbiddenException::class);
+			$this->expectExceptionMessage('This action has been disabled by your administrator.');
+			$middleware->beforeController($controller, $controllerMethod);
 		}
 
 		#[DataProvider('shareMutationProvider')]

@@ -23,6 +23,7 @@ use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\Http\RedirectResponse;
 use OCP\AppFramework\Http\Response;
 use OCP\AppFramework\Middleware;
+use OCP\AppFramework\OCS\OCSForbiddenException;
 use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IURLGenerator;
@@ -332,6 +333,13 @@ final class RestrictionMiddleware extends Middleware {
 			&& $permissionSet->allows(Permission::WriteFiles)
 		) {
 			return;
+		}
+
+		if (str_contains($this->request->getRequestUri(), '/ocs/')) {
+			// Let Nextcloud render the OCS error response across supported versions.
+			throw new OCSForbiddenException(
+				$this->l10n->t('This action has been disabled by your administrator.'),
+			);
 		}
 
 		throw $this->restrictedAction($this->isApiRequest());
