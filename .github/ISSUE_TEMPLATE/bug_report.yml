@@ -1,0 +1,53 @@
+name: Bug report
+description: Report a reproducible problem with User Lockdown.
+title: "[Bug]: "
+labels: [bug, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please remove secrets and personal data from logs and screenshots. Report security vulnerabilities through the private reporting link instead.
+  - type: input
+    id: app-version
+    attributes:
+      label: User Lockdown version
+      placeholder: "e.g. 1.1.0"
+    validations:
+      required: true
+  - type: input
+    id: nextcloud-version
+    attributes:
+      label: Nextcloud version
+      placeholder: "e.g. 34.0.0"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the relevant permission settings and the account type.
+      placeholder: |
+        1. Configure ...
+        2. Sign in as ...
+        3. Open ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or screenshots
+      description: Redact tokens, passwords, user data, and private URLs.
+    validations:
+      required: false

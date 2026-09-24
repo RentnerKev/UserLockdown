@@ -1,0 +1,61 @@
+frontend:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/**"
+          - "tests/frontend/**"
+          - "css/**"
+          - "js/**"
+          - "vite.config.ts"
+          - "vitest.config.ts"
+          - "tsconfig*.json"
+          - "ox*.json"
+
+php:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "lib/**"
+          - "appinfo/**"
+          - "templates/**"
+          - "tests/Unit/**"
+          - "composer.json"
+          - "composer.lock"
+          - "phpunit.xml"
+          - "phpstan.neon"
+          - ".php-cs-fixer.dist.php"
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/workflows/**"
+          - ".github/dependabot.yml"
+          - ".github/labeler.yml"
+          - "Makefile"
+          - "docker/**"
+          - "docker-compose.yml"
+          - "scripts/pull-compose-images.sh"
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "package.json"
+          - "bun.lock"
+          - "composer.json"
+          - "composer.lock"
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file: "tests/**"
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.md"
+          - ".github/ISSUE_TEMPLATE/**"
+
+release:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/workflows/release.yml"
+          - ".github/workflows/changelog.yml"
+          - "scripts/package.*"
+          - "cliff.toml"

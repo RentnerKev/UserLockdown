@@ -227,6 +227,7 @@ immediately after publication.
 
 - [Source repository](https://github.com/RentnerKev/UserLockdown)
 - [Issue tracker](https://github.com/RentnerKev/UserLockdown/issues)
+- [Contribution guide](CONTRIBUTING.md)
 - [Private security report](https://github.com/RentnerKev/UserLockdown/security/advisories/new)
 
 ## License
