@@ -10,7 +10,7 @@
 .user-lockdown-restricted .app-navigation-entry__settings,
 .user-lockdown-restricted
   #header-menu-user-menu
-  a:not([href*='/logout']):not([href*='/settings/user/security']),
+  a:not(#logout):not([href*='/logout']):not([href*='/settings/user/security']),
 .user-lockdown-restricted #header-menu-user-menu button,
 .user-lockdown-restricted [data-user-lockdown-hidden='true'],
 .user-lockdown-deny-read [data-cy-files-list],

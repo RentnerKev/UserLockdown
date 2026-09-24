@@ -142,6 +142,17 @@ namespace OCA\UserStatus\Controller {
 	}
 }
 
+namespace OCA\UserOIDC\Controller {
+	use OCP\AppFramework\Controller;
+	use OCP\IRequest;
+
+	final class LoginController extends Controller {
+		public function __construct(IRequest $request) {
+			parent::__construct('user_oidc', $request);
+		}
+	}
+}
+
 namespace OC\Core\Controller {
 	use OCP\AppFramework\Controller;
 	use OCP\IRequest;
@@ -193,6 +204,7 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 	use OCA\UserLockdown\Policy\PermissionSet;
 	use OCA\UserLockdown\Service\RestrictedUserService;
 	use OCA\UserLockdown\Service\RestrictionContext;
+	use OCA\UserOIDC\Controller\LoginController as UserOIDCLoginController;
 	use OCA\UserStatus\Controller\HeartbeatController as UserStatusHeartbeatController;
 	use OCA\UserStatus\Controller\UserStatusController;
 	use OCP\AppFramework\Controller;
@@ -223,6 +235,21 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 
 		/** @var RestrictedUserService&MockObject */
 		private RestrictedUserService $restrictedUserService;
+
+		public function testOidcSingleLogoutIsAllowedWithoutAllowingOtherOidcActions(): void {
+			$middleware = $this->createMiddleware('GET', '/index.php/apps/user_oidc/sls');
+			$controller = new UserOIDCLoginController($this->request);
+
+			$middleware->beforeController($controller, 'singleLogoutService');
+			$this->addToAssertionCount(1);
+
+			$otherMiddleware = $this->createMiddleware('GET', '/index.php/apps/user_oidc/code');
+			$this->expectException(RestrictedActionException::class);
+			$otherMiddleware->beforeController(
+				new UserOIDCLoginController($this->request),
+				'code',
+			);
+		}
 
 		public function testFilesReadControllerIsAllowed(): void {
 			$middleware = $this->createMiddleware('GET', '/index.php/apps/files');
