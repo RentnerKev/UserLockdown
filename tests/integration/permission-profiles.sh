@@ -49,9 +49,11 @@ assert_status() {
 	description="$2"
 	shift 2
 
-	actual="$(curl --silent --show-error --output "$null_device" --write-out '%{http_code}' "$@")"
+	response_file="$temporary_dir/assert-status-response"
+	actual="$(curl --silent --show-error --output "$response_file" --write-out '%{http_code}' "$@")"
 	if [ "$actual" != "$expected" ]; then
 		printf '%s\n' "$description: expected HTTP $expected, got $actual" >&2
+		bun -e 'try { const meta = JSON.parse(await Bun.stdin.text()).ocs?.meta; if (meta) console.error("OCS meta: " + JSON.stringify(meta)) } catch {}' < "$response_file"
 		exit 1
 	fi
 
