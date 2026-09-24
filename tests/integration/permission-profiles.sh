@@ -53,7 +53,7 @@ assert_status() {
 	actual="$(curl --silent --show-error --output "$response_file" --write-out '%{http_code}' "$@")"
 	if [ "$actual" != "$expected" ]; then
 		printf '%s\n' "$description: expected HTTP $expected, got $actual" >&2
-		bun -e 'try { const meta = JSON.parse(await Bun.stdin.text()).ocs?.meta; if (meta) console.error("OCS meta: " + JSON.stringify(meta)) } catch {}' < "$response_file"
+		bun -e 'const raw = await Bun.stdin.text(); try { const response = JSON.parse(raw); console.error("Response fields: " + JSON.stringify({keys: Object.keys(response), ocsMeta: response.ocs?.meta, error: response.error})) } catch { console.error("Response format: " + (raw.trimStart().startsWith("<") ? "markup" : "other") + ", title: " + (raw.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1] ?? "none")) }' < "$response_file"
 		exit 1
 	fi
 
