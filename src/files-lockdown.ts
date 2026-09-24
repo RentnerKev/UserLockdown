@@ -24,7 +24,7 @@ const alwaysBlockedSelectors = [
   '#firstrunwizard',
   '.unified-search-menu',
   '.app-navigation-entry__settings',
-  '#header-menu-user-menu a:not([href*="/logout"]):not([href*="/settings/user/security"])',
+  '#header-menu-user-menu a:not(#logout):not([href*="/logout"]):not([href*="/settings/user/security"])',
   '#header-menu-user-menu button',
 ]
 

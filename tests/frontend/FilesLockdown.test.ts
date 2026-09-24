@@ -76,6 +76,20 @@ afterEach(() => {
 })
 
 describe('restricted Files interface', () => {
+  it('keeps the user_oidc single logout entry available for restricted users', async () => {
+    renderFilesInterface()
+    const logoutLink = document.querySelector<HTMLAnchorElement>('#logout-entry a')
+    expect(logoutLink).not.toBeNull()
+    logoutLink!.id = 'logout'
+    logoutLink!.href = '/apps/user_oidc/sls'
+
+    await startWithPermissions(permissions())
+
+    expect(document.getElementById('logout-entry')).toBeVisible()
+    expect(document.getElementById('logout-entry')).not.toHaveAttribute('data-user-lockdown-hidden')
+    expect(document.getElementById('profile-entry')).not.toBeVisible()
+  })
+
   it('loads permissions from initial state and hides only read-only capabilities', async () => {
     renderFilesInterface()
     await startWithPermissions(permissions())

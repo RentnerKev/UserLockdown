@@ -54,6 +54,9 @@ final class RestrictionMiddleware extends Middleware {
 			'showChallenge',
 			'solveChallenge',
 		],
+		'OCA\\UserOIDC\\Controller\\LoginController' => [
+			'singleLogoutService',
+		],
 	];
 
 	/** @var array<string, list<string>> */
