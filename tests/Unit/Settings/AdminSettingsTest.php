@@ -26,9 +26,9 @@ class AdminSettingsTest extends TestCase {
 
 	public function testAdminSectionMetadata(): void {
 		$l10n = $this->createMock(IL10N::class);
-		$l10n->method('t')->with('User Lockdown')->willReturn('User Lockdown');
+		$l10n->expects(self::once())->method('t')->with('User Lockdown')->willReturn('User Lockdown');
 		$urlGenerator = $this->createMock(IURLGenerator::class);
-		$urlGenerator->method('imagePath')
+		$urlGenerator->expects(self::once())->method('imagePath')
 			->with('user_lockdown', 'app.svg')
 			->willReturn('/apps/user_lockdown/img/app.svg');
 		$section = new AdminSection($l10n, $urlGenerator);

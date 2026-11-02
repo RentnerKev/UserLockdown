@@ -127,8 +127,8 @@ class RestrictionContextTest extends TestCase {
 
 	public function testFullAccessPolicyIsAnEffectiveBypass(): void {
 		$user = $this->createUser('alice');
-		$this->userSession->method('getUser')->willReturn($user);
-		$this->groupManager->method('isAdmin')->with('alice')->willReturn(false);
+		$this->userSession->expects(self::once())->method('getUser')->willReturn($user);
+		$this->groupManager->expects(self::once())->method('isAdmin')->with('alice')->willReturn(false);
 		$this->restrictedUserService->expects(self::once())
 			->method('getPermissionSet')
 			->with('alice')
@@ -139,10 +139,10 @@ class RestrictionContextTest extends TestCase {
 	}
 
 	/**
-	 * @return IUser&MockObject
+	 * @return IUser&\PHPUnit\Framework\MockObject\Stub
 	 */
 	private function createUser(string $userId): IUser {
-		$user = $this->createMock(IUser::class);
+		$user = $this->createStub(IUser::class);
 		$user->method('getUID')->willReturn($userId);
 
 		return $user;
