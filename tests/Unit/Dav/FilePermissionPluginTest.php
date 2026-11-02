@@ -53,7 +53,7 @@ class FilePermissionPluginTest extends TestCase {
 
 		$plugin->guardRequest(
 			$this->createDavRequest($method, 'files/alice/Documents'),
-			$this->createMock(ResponseInterface::class),
+			$this->createStub(ResponseInterface::class),
 		);
 	}
 
@@ -64,7 +64,7 @@ class FilePermissionPluginTest extends TestCase {
 		$this->expectException(Forbidden::class);
 		$plugin->guardRequest(
 			$this->createDavRequest($method, 'files/alice/Documents'),
-			$this->createMock(ResponseInterface::class),
+			$this->createStub(ResponseInterface::class),
 		);
 	}
 
@@ -74,7 +74,7 @@ class FilePermissionPluginTest extends TestCase {
 
 		$plugin->guardRequest(
 			$this->createDavRequest($method, 'files/alice/Documents'),
-			$this->createMock(ResponseInterface::class),
+			$this->createStub(ResponseInterface::class),
 		);
 	}
 
@@ -86,7 +86,7 @@ class FilePermissionPluginTest extends TestCase {
 		$this->expectExceptionMessage('This action has been disabled by your administrator.');
 		$plugin->guardRequest(
 			$this->createDavRequest($method, 'files/alice/Documents'),
-			$this->createMock(ResponseInterface::class),
+			$this->createStub(ResponseInterface::class),
 		);
 	}
 
@@ -96,7 +96,7 @@ class FilePermissionPluginTest extends TestCase {
 		$this->expectException(Forbidden::class);
 		$plugin->guardRequest(
 			$this->createDavRequest('DELETE', 'files/alice/Documents/report.txt'),
-			$this->createMock(ResponseInterface::class),
+			$this->createStub(ResponseInterface::class),
 		);
 	}
 
@@ -105,7 +105,7 @@ class FilePermissionPluginTest extends TestCase {
 
 		$plugin->guardRequest(
 			$this->createDavRequest('DELETE', 'files/alice/Documents/report.txt'),
-			$this->createMock(ResponseInterface::class),
+			$this->createStub(ResponseInterface::class),
 		);
 	}
 
@@ -114,7 +114,7 @@ class FilePermissionPluginTest extends TestCase {
 
 		$plugin->guardRequest(
 			$this->createDavRequest('DELETE', 'uploads/alice/upload-id'),
-			$this->createMock(ResponseInterface::class),
+			$this->createStub(ResponseInterface::class),
 		);
 	}
 
@@ -124,7 +124,7 @@ class FilePermissionPluginTest extends TestCase {
 			'Destination' => 'http://localhost/remote.php/dav/files/alice/new.txt',
 		]);
 
-		$plugin->guardRequest($request, $this->createMock(ResponseInterface::class));
+		$plugin->guardRequest($request, $this->createStub(ResponseInterface::class));
 	}
 
 	public function testMoveOverwriteRequiresDeletePermission(): void {
@@ -134,7 +134,7 @@ class FilePermissionPluginTest extends TestCase {
 		]);
 
 		$this->expectException(Forbidden::class);
-		$plugin->guardRequest($request, $this->createMock(ResponseInterface::class));
+		$plugin->guardRequest($request, $this->createStub(ResponseInterface::class));
 	}
 
 	public function testMoveOverwriteIsAllowedWithDeletePermission(): void {
@@ -143,7 +143,7 @@ class FilePermissionPluginTest extends TestCase {
 			'Destination' => 'http://localhost/remote.php/dav/files/alice/existing.txt',
 		]);
 
-		$plugin->guardRequest($request, $this->createMock(ResponseInterface::class));
+		$plugin->guardRequest($request, $this->createStub(ResponseInterface::class));
 	}
 
 	public function testExplicitNoOverwriteDoesNotRequireDeletePermission(): void {
@@ -153,7 +153,7 @@ class FilePermissionPluginTest extends TestCase {
 			'Overwrite' => 'F',
 		]);
 
-		$plugin->guardRequest($request, $this->createMock(ResponseInterface::class));
+		$plugin->guardRequest($request, $this->createStub(ResponseInterface::class));
 	}
 
 	public function testMoveToForeignDavNamespaceIsBlocked(): void {
@@ -163,7 +163,7 @@ class FilePermissionPluginTest extends TestCase {
 		]);
 
 		$this->expectException(Forbidden::class);
-		$plugin->guardRequest($request, $this->createMock(ResponseInterface::class));
+		$plugin->guardRequest($request, $this->createStub(ResponseInterface::class));
 	}
 
 	/** @return iterable<string, array{string}> */
@@ -183,7 +183,7 @@ class FilePermissionPluginTest extends TestCase {
 		$this->expectException(Forbidden::class);
 		$plugin->guardRequest(
 			$this->createDavRequest('GET', $path),
-			$this->createMock(ResponseInterface::class),
+			$this->createStub(ResponseInterface::class),
 		);
 	}
 
@@ -192,7 +192,7 @@ class FilePermissionPluginTest extends TestCase {
 
 		$plugin->guardRequest(
 			$this->createDavRequest('OPTIONS', '/'),
-			$this->createMock(ResponseInterface::class),
+			$this->createStub(ResponseInterface::class),
 		);
 	}
 
@@ -202,7 +202,7 @@ class FilePermissionPluginTest extends TestCase {
 		$this->expectException(Forbidden::class);
 		$plugin->guardRequest(
 			$this->createDavRequest('ACL', 'files/alice/Documents'),
-			$this->createMock(ResponseInterface::class),
+			$this->createStub(ResponseInterface::class),
 		);
 	}
 
@@ -214,7 +214,7 @@ class FilePermissionPluginTest extends TestCase {
 
 		$plugin->guardRequest(
 			$this->createDavRequest('GET', 'Documents/report.pdf'),
-			$this->createMock(ResponseInterface::class),
+			$this->createStub(ResponseInterface::class),
 		);
 	}
 
@@ -227,7 +227,7 @@ class FilePermissionPluginTest extends TestCase {
 		$this->expectException(Forbidden::class);
 		$plugin->guardRequest(
 			$this->createDavRequest('PUT', 'Documents/report.pdf'),
-			$this->createMock(ResponseInterface::class),
+			$this->createStub(ResponseInterface::class),
 		);
 	}
 
@@ -240,7 +240,7 @@ class FilePermissionPluginTest extends TestCase {
 		$this->expectException(Forbidden::class);
 		$plugin->guardRequest(
 			$this->createDavRequest('GET', 'calendars/alice/personal'),
-			$this->createMock(ResponseInterface::class),
+			$this->createStub(ResponseInterface::class),
 		);
 	}
 
@@ -249,7 +249,7 @@ class FilePermissionPluginTest extends TestCase {
 
 		$plugin->guardRequest(
 			$this->createDavRequest('DELETE', 'calendars/alice/personal'),
-			$this->createMock(ResponseInterface::class),
+			$this->createStub(ResponseInterface::class),
 		);
 	}
 
@@ -260,7 +260,7 @@ class FilePermissionPluginTest extends TestCase {
 		] as $plugin) {
 			$plugin->guardRequest(
 				$this->createDavRequest('DELETE', 'calendars/alice/personal'),
-				$this->createMock(ResponseInterface::class),
+				$this->createStub(ResponseInterface::class),
 			);
 		}
 
@@ -272,7 +272,7 @@ class FilePermissionPluginTest extends TestCase {
 
 		$plugin->guardRequest(
 			$this->createDavRequest('MKCOL', 'files/anonymous/New'),
-			$this->createMock(ResponseInterface::class),
+			$this->createStub(ResponseInterface::class),
 		);
 		$this->addToAssertionCount(1);
 	}
@@ -308,27 +308,29 @@ class FilePermissionPluginTest extends TestCase {
 		?string $userId = 'alice',
 		bool $admin = false,
 	): FilePermissionPlugin {
-		$userSession = $this->createMock(IUserSession::class);
+		$userSession = $this->createStub(IUserSession::class);
 		$groupManager = $this->createMock(IGroupManager::class);
 		$restrictedUserService = $this->createMock(RestrictedUserService::class);
 
 		if ($userId === null) {
+			$groupManager->expects(self::never())->method('isAdmin');
+			$restrictedUserService->expects(self::never())->method('getPermissionSet');
 			$userSession->method('getUser')->willReturn(null);
 		} else {
-			$user = $this->createMock(IUser::class);
+			$user = $this->createStub(IUser::class);
 			$user->method('getUID')->willReturn($userId);
 			$userSession->method('getUser')->willReturn($user);
-			$groupManager->method('isAdmin')->with($userId)->willReturn($admin);
+			$groupManager->expects(self::atMost(1))->method('isAdmin')->with($userId)->willReturn($admin);
 			if ($admin) {
 				$restrictedUserService->expects(self::never())->method('getPermissionSet');
 			} else {
-				$restrictedUserService->method('getPermissionSet')
+				$restrictedUserService->expects(self::atMost(1))->method('getPermissionSet')
 					->with($userId)
 					->willReturn($permissionSet);
 			}
 		}
 
-		$nextcloudRequest = $this->createMock(IRequest::class);
+		$nextcloudRequest = $this->createStub(IRequest::class);
 		$nextcloudRequest->method('getRequestUri')->willReturn($requestUri);
 
 		return new FilePermissionPlugin(
@@ -343,7 +345,7 @@ class FilePermissionPluginTest extends TestCase {
 		string $path,
 		array $headers = [],
 	): RequestInterface {
-		$request = $this->createMock(RequestInterface::class);
+		$request = $this->createStub(RequestInterface::class);
 		$request->method('getMethod')->willReturn($method);
 		$request->method('getPath')->willReturn($path);
 		$request->method('getHeader')

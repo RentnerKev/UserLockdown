@@ -56,7 +56,7 @@ class UserCreatedListenerTest extends TestCase {
 	}
 
 	private function createUser(string $userId): IUser {
-		$user = $this->createMock(IUser::class);
+		$user = $this->createStub(IUser::class);
 		$user->method('getUID')->willReturn($userId);
 
 		return $user;

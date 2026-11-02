@@ -29,7 +29,7 @@ class PermissionSettingsServiceTest extends TestCase {
 	protected function setUp(): void {
 		parent::setUp();
 
-		$appConfig = $this->createMock(IAppConfig::class);
+		$appConfig = $this->createStub(IAppConfig::class);
 		$appConfig->method('searchKeys')->willReturnCallback(
 			fn (string $app, string $prefix): array => array_values(array_filter(
 				array_keys($this->storedPresets),
@@ -62,7 +62,7 @@ class PermissionSettingsServiceTest extends TestCase {
 			},
 		);
 
-		$secureRandom = $this->createMock(ISecureRandom::class);
+		$secureRandom = $this->createStub(ISecureRandom::class);
 		$secureRandom->method('generate')->willReturnCallback(function (): string {
 			$this->generatedId++;
 

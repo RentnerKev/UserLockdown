@@ -24,14 +24,14 @@ use PHPUnit\Framework\TestCase;
 
 final class ShareInteractionRestrictionListenerTest extends TestCase {
 	public function testRestrictedUserCannotCreateOrUpdateShare(): void {
-		$user = $this->createMock(IUser::class);
+		$user = $this->createStub(IUser::class);
 		$user->method('getUID')->willReturn('alice');
-		$userSession = $this->createMock(IUserSession::class);
+		$userSession = $this->createStub(IUserSession::class);
 		$userSession->method('getUser')->willReturn($user);
 		$groupManager = $this->createMock(IGroupManager::class);
-		$groupManager->method('isAdmin')->with('alice')->willReturn(false);
+		$groupManager->expects(self::once())->method('isAdmin')->with('alice')->willReturn(false);
 		$restrictedUserService = $this->createMock(RestrictedUserService::class);
-		$restrictedUserService->method('getPermissionSet')
+		$restrictedUserService->expects(self::once())->method('getPermissionSet')
 			->with('alice')
 			->willReturn(PermissionSet::readOnly());
 		$context = new RestrictionContext(
@@ -62,14 +62,14 @@ final class ShareInteractionRestrictionListenerTest extends TestCase {
 	}
 
 	public function testSharePermissionAllowsShareInteraction(): void {
-		$user = $this->createMock(IUser::class);
+		$user = $this->createStub(IUser::class);
 		$user->method('getUID')->willReturn('alice');
-		$userSession = $this->createMock(IUserSession::class);
+		$userSession = $this->createStub(IUserSession::class);
 		$userSession->method('getUser')->willReturn($user);
 		$groupManager = $this->createMock(IGroupManager::class);
-		$groupManager->method('isAdmin')->with('alice')->willReturn(false);
+		$groupManager->expects(self::once())->method('isAdmin')->with('alice')->willReturn(false);
 		$restrictedUserService = $this->createMock(RestrictedUserService::class);
-		$restrictedUserService->method('getPermissionSet')
+		$restrictedUserService->expects(self::once())->method('getPermissionSet')
 			->with('alice')
 			->willReturn(PermissionSet::fromArray([
 				'viewFiles' => true,

@@ -37,7 +37,7 @@ class RestrictedUserServiceTest extends TestCase {
 	/** @var IGroupManager&MockObject */
 	private IGroupManager $groupManager;
 
-	/** @var ITimeFactory&MockObject */
+	/** @var ITimeFactory&\PHPUnit\Framework\MockObject\Stub */
 	private ITimeFactory $timeFactory;
 
 	private int $defaultMask = 1;
@@ -49,15 +49,15 @@ class RestrictedUserServiceTest extends TestCase {
 		$this->repository = $this->createMock(RestrictedUserRepository::class);
 		$this->userManager = $this->createMock(IUserManager::class);
 		$this->groupManager = $this->createMock(IGroupManager::class);
-		$this->timeFactory = $this->createMock(ITimeFactory::class);
-		$appConfig = $this->createMock(IAppConfig::class);
+		$this->timeFactory = $this->createStub(ITimeFactory::class);
+		$appConfig = $this->createStub(IAppConfig::class);
 		$appConfig->method('searchKeys')->willReturn([]);
 		$appConfig->method('getValueInt')->willReturnCallback(
 			fn (): int => $this->defaultMask,
 		);
 		$permissionSettingsService = new PermissionSettingsService(
 			$appConfig,
-			$this->createMock(ISecureRandom::class),
+			$this->createStub(ISecureRandom::class),
 		);
 		$this->service = new RestrictedUserService(
 			$this->repository,
@@ -70,6 +70,8 @@ class RestrictedUserServiceTest extends TestCase {
 	}
 
 	public function testRestrictedUserPermissionsAreDetectedAndCached(): void {
+		$this->groupManager->expects(self::exactly(2))->method('isAdmin');
+		$this->userManager->expects(self::never())->method('get');
 		$entry = $this->createEntry('alice', PermissionSet::readOnly());
 		$this->repository->expects(self::once())
 			->method('findByUserId')
@@ -81,6 +83,8 @@ class RestrictedUserServiceTest extends TestCase {
 	}
 
 	public function testNormalUserIsDetectedAndCached(): void {
+		$this->groupManager->expects(self::exactly(2))->method('isAdmin');
+		$this->userManager->expects(self::never())->method('get');
 		$this->repository->expects(self::once())
 			->method('findByUserId')
 			->with('bob')
@@ -91,7 +95,9 @@ class RestrictedUserServiceTest extends TestCase {
 	}
 
 	public function testFullAccessPolicyIsNotReportedAsRestricted(): void {
-		$this->repository->method('findByUserId')
+		$this->groupManager->expects(self::exactly(2))->method('isAdmin');
+		$this->userManager->expects(self::never())->method('get');
+		$this->repository->expects(self::once())->method('findByUserId')
 			->with('alice')
 			->willReturn($this->createEntry('alice', PermissionSet::fullAccess()));
 
@@ -100,7 +106,8 @@ class RestrictedUserServiceTest extends TestCase {
 	}
 
 	public function testAdministratorIsNeverReportedAsRestricted(): void {
-		$this->groupManager->method('isAdmin')->with('admin')->willReturn(true);
+		$this->userManager->expects(self::never())->method('get');
+		$this->groupManager->expects(self::exactly(2))->method('isAdmin')->with('admin')->willReturn(true);
 		$this->repository->expects(self::never())->method('findByUserId');
 
 		self::assertFalse($this->service->isRestricted('admin'));
@@ -108,10 +115,12 @@ class RestrictedUserServiceTest extends TestCase {
 	}
 
 	public function testStoredInvalidMaskFailsClosed(): void {
+		$this->groupManager->expects(self::once())->method('isAdmin');
+		$this->userManager->expects(self::never())->method('get');
 		$entry = new RestrictedUser();
 		$entry->setUserId('alice');
 		$entry->setPermissions(Permission::WriteFiles->value);
-		$this->repository->method('findByUserId')->willReturn($entry);
+		$this->repository->expects(self::once())->method('findByUserId')->willReturn($entry);
 
 		self::assertSame(PermissionSet::blocked()->toArray(), $this->service->getPermissions('alice'));
 	}
@@ -123,12 +132,12 @@ class RestrictedUserServiceTest extends TestCase {
 			->method('get')
 			->with('alice')
 			->willReturn($user);
-		$this->groupManager->method('isAdmin')
+		$this->groupManager->expects(self::exactly(2))->method('isAdmin')
 			->willReturnMap([
 				['alice', false],
 				['admin', true],
 			]);
-		$this->repository->method('existsByUserId')->with('alice')->willReturn(false);
+		$this->repository->expects(self::once())->method('existsByUserId')->with('alice')->willReturn(false);
 		$this->timeFactory->method('getTime')->willReturn(1_722_000_000);
 		$this->repository->expects(self::once())
 			->method('insert')
@@ -149,8 +158,8 @@ class RestrictedUserServiceTest extends TestCase {
 		$updated = PermissionSet::fromMask(
 			Permission::ViewFiles->value | Permission::DeleteFiles->value,
 		);
-		$this->userManager->method('get')->with('alice')->willReturn($user);
-		$this->groupManager->method('isAdmin')
+		$this->userManager->expects(self::once())->method('get')->with('alice')->willReturn($user);
+		$this->groupManager->expects(self::exactly(4))->method('isAdmin')
 			->willReturnMap([
 				['alice', false],
 				['admin', true],
@@ -171,13 +180,13 @@ class RestrictedUserServiceTest extends TestCase {
 
 	public function testUpdatingUnmanagedUserFails(): void {
 		$user = $this->createUser('alice', 'Alice Example');
-		$this->userManager->method('get')->with('alice')->willReturn($user);
-		$this->groupManager->method('isAdmin')
+		$this->userManager->expects(self::once())->method('get')->with('alice')->willReturn($user);
+		$this->groupManager->expects(self::exactly(2))->method('isAdmin')
 			->willReturnMap([
 				['alice', false],
 				['admin', true],
 			]);
-		$this->repository->method('findByUserId')->with('alice')->willReturn(null);
+		$this->repository->expects(self::once())->method('findByUserId')->with('alice')->willReturn(null);
 		$this->repository->expects(self::never())->method('update');
 
 		$this->expectException(DomainException::class);
@@ -187,6 +196,8 @@ class RestrictedUserServiceTest extends TestCase {
 	}
 
 	public function testUserCanBeRemoved(): void {
+		$this->groupManager->expects(self::never())->method('isAdmin');
+		$this->userManager->expects(self::never())->method('get');
 		$this->repository->expects(self::once())
 			->method('deleteByUserId')
 			->with('alice')
@@ -196,11 +207,12 @@ class RestrictedUserServiceTest extends TestCase {
 	}
 
 	public function testRestrictedUsersIncludePermissions(): void {
+		$this->groupManager->expects(self::once())->method('isAdmin');
 		$aliceEntry = $this->createEntry('alice', PermissionSet::readOnly());
 		$deletedEntry = $this->createEntry('deleted-user', PermissionSet::readOnly());
-		$this->repository->method('findAll')->willReturn([$aliceEntry, $deletedEntry]);
+		$this->repository->expects(self::once())->method('findAll')->willReturn([$aliceEntry, $deletedEntry]);
 		$alice = $this->createUser('alice', 'Alice Example');
-		$this->userManager->method('get')->willReturnMap([
+		$this->userManager->expects(self::exactly(2))->method('get')->willReturnMap([
 			['alice', $alice],
 			['deleted-user', null],
 		]);
@@ -216,8 +228,8 @@ class RestrictedUserServiceTest extends TestCase {
 
 	public function testAdministratorCannotBeRestricted(): void {
 		$user = $this->createUser('admin', 'Administrator');
-		$this->userManager->method('get')->with('admin')->willReturn($user);
-		$this->groupManager->method('isAdmin')->with('admin')->willReturn(true);
+		$this->userManager->expects(self::once())->method('get')->with('admin')->willReturn($user);
+		$this->groupManager->expects(self::once())->method('isAdmin')->with('admin')->willReturn(true);
 		$this->repository->expects(self::never())->method('insert');
 
 		$this->expectException(InvalidArgumentException::class);
@@ -228,8 +240,8 @@ class RestrictedUserServiceTest extends TestCase {
 
 	public function testNonAdministratorCannotUpdatePermissions(): void {
 		$user = $this->createUser('alice', 'Alice Example');
-		$this->userManager->method('get')->with('alice')->willReturn($user);
-		$this->groupManager->method('isAdmin')->willReturn(false);
+		$this->userManager->expects(self::once())->method('get')->with('alice')->willReturn($user);
+		$this->groupManager->expects(self::exactly(2))->method('isAdmin')->willReturn(false);
 		$this->repository->expects(self::never())->method('findByUserId');
 		$this->repository->expects(self::never())->method('update');
 
@@ -241,8 +253,8 @@ class RestrictedUserServiceTest extends TestCase {
 
 	public function testNonAdministratorCannotAddRestriction(): void {
 		$user = $this->createUser('alice', 'Alice Example');
-		$this->userManager->method('get')->with('alice')->willReturn($user);
-		$this->groupManager->method('isAdmin')->willReturn(false);
+		$this->userManager->expects(self::once())->method('get')->with('alice')->willReturn($user);
+		$this->groupManager->expects(self::exactly(2))->method('isAdmin')->willReturn(false);
 		$this->repository->expects(self::never())->method('existsByUserId');
 		$this->repository->expects(self::never())->method('insert');
 
@@ -254,13 +266,13 @@ class RestrictedUserServiceTest extends TestCase {
 
 	public function testDuplicateEntryIsPrevented(): void {
 		$user = $this->createUser('alice', 'Alice Example');
-		$this->userManager->method('get')->with('alice')->willReturn($user);
-		$this->groupManager->method('isAdmin')
+		$this->userManager->expects(self::once())->method('get')->with('alice')->willReturn($user);
+		$this->groupManager->expects(self::exactly(2))->method('isAdmin')
 			->willReturnMap([
 				['alice', false],
 				['admin', true],
 			]);
-		$this->repository->method('existsByUserId')->with('alice')->willReturn(true);
+		$this->repository->expects(self::once())->method('existsByUserId')->with('alice')->willReturn(true);
 		$this->repository->expects(self::never())->method('insert');
 
 		$this->expectException(DomainException::class);
@@ -272,8 +284,8 @@ class RestrictedUserServiceTest extends TestCase {
 	public function testCacheIsInvalidatedAfterAdding(): void {
 		$user = $this->createUser('alice', 'Alice Example');
 		$entry = $this->createEntry('alice', PermissionSet::readOnly());
-		$this->userManager->method('get')->with('alice')->willReturn($user);
-		$this->groupManager->method('isAdmin')
+		$this->userManager->expects(self::once())->method('get')->with('alice')->willReturn($user);
+		$this->groupManager->expects(self::exactly(4))->method('isAdmin')
 			->willReturnMap([
 				['alice', false],
 				['admin', true],
@@ -282,8 +294,8 @@ class RestrictedUserServiceTest extends TestCase {
 			->method('findByUserId')
 			->with('alice')
 			->willReturnOnConsecutiveCalls(null, $entry);
-		$this->repository->method('existsByUserId')->with('alice')->willReturn(false);
-		$this->repository->method('insert')
+		$this->repository->expects(self::once())->method('existsByUserId')->with('alice')->willReturn(false);
+		$this->repository->expects(self::once())->method('insert')
 			->willReturnCallback(static fn (RestrictedUser $entity): RestrictedUser => $entity);
 
 		self::assertFalse($this->service->isRestricted('alice'));
@@ -292,6 +304,8 @@ class RestrictedUserServiceTest extends TestCase {
 	}
 
 	public function testCacheIsInvalidatedAfterRemoving(): void {
+		$this->groupManager->expects(self::exactly(2))->method('isAdmin');
+		$this->userManager->expects(self::never())->method('get');
 		$this->repository->expects(self::exactly(2))
 			->method('findByUserId')
 			->with('alice')
@@ -299,7 +313,7 @@ class RestrictedUserServiceTest extends TestCase {
 				$this->createEntry('alice', PermissionSet::readOnly()),
 				null,
 			);
-		$this->repository->method('deleteByUserId')->with('alice')->willReturn(1);
+		$this->repository->expects(self::once())->method('deleteByUserId')->with('alice')->willReturn(1);
 
 		self::assertTrue($this->service->isRestricted('alice'));
 		$this->service->removeRestrictedUser('alice');
@@ -310,11 +324,11 @@ class RestrictedUserServiceTest extends TestCase {
 		$alice = $this->createUser('alice', 'Alice Example');
 		$bob = $this->createUser('bob', 'Bob Example');
 		$admin = $this->createUser('admin', 'Admin Example');
-		$this->userManager->method('search')->with('example', 20, 0)
+		$this->userManager->expects(self::once())->method('search')->with('example', 20, 0)
 			->willReturn([$alice, $admin]);
-		$this->userManager->method('searchDisplayName')->with('example', 20, 0)
+		$this->userManager->expects(self::once())->method('searchDisplayName')->with('example', 20, 0)
 			->willReturn([$alice, $bob]);
-		$this->groupManager->method('isAdmin')
+		$this->groupManager->expects(self::exactly(4))->method('isAdmin')
 			->willReturnCallback(static fn (string $userId): bool => $userId === 'admin');
 		$this->repository->expects(self::once())
 			->method('findRestrictedUserIds')
@@ -343,9 +357,9 @@ class RestrictedUserServiceTest extends TestCase {
 		return $entry;
 	}
 
-	/** @return IUser&MockObject */
+	/** @return IUser&\PHPUnit\Framework\MockObject\Stub */
 	private function createUser(string $userId, string $displayName): IUser {
-		$user = $this->createMock(IUser::class);
+		$user = $this->createStub(IUser::class);
 		$user->method('getUID')->willReturn($userId);
 		$user->method('getDisplayName')->willReturn($displayName);
 

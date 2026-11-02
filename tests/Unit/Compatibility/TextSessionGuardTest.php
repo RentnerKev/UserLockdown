@@ -17,11 +17,11 @@ use PHPUnit\Framework\TestCase;
 final class TextSessionGuardTest extends TestCase {
 	public function testSessionOwnerIsStoredBySensitiveTokenHash(): void {
 		$appConfig = $this->createMock(IAppConfig::class);
-		$timeFactory = $this->createMock(ITimeFactory::class);
+		$timeFactory = $this->createStub(ITimeFactory::class);
 		$timeFactory->method('getTime')->willReturn(1_722_000_000);
 		$key = 'text_ro_' . substr(hash('sha256', 'secret-token'), 0, 56);
 
-		$appConfig->method('getValueString')
+		$appConfig->expects(self::once())->method('getValueString')
 			->with('user_lockdown', $key, '', true)
 			->willReturn('');
 		$appConfig->expects(self::once())
@@ -42,7 +42,7 @@ final class TextSessionGuardTest extends TestCase {
 
 	public function testRememberedSessionOwnerCanBeResolvedAndForgotten(): void {
 		$appConfig = $this->createMock(IAppConfig::class);
-		$timeFactory = $this->createMock(ITimeFactory::class);
+		$timeFactory = $this->createStub(ITimeFactory::class);
 		$key = 'text_ro_' . substr(hash('sha256', 'secret-token'), 0, 56);
 		$appConfig->expects(self::once())
 			->method('getValueString')

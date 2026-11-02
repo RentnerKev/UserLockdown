@@ -138,18 +138,18 @@ class FileMutationRestrictionListenerTest extends TestCase {
 	}
 
 	private function createListener(PermissionSet $permissionSet): FileMutationRestrictionListener {
-		$user = $this->createMock(IUser::class);
+		$user = $this->createStub(IUser::class);
 		$user->method('getUID')->willReturn('alice');
-		$userSession = $this->createMock(IUserSession::class);
+		$userSession = $this->createStub(IUserSession::class);
 		$userSession->method('getUser')->willReturn($user);
 		$groupManager = $this->createMock(IGroupManager::class);
-		$groupManager->method('isAdmin')->with('alice')->willReturn(false);
+		$groupManager->expects(self::atMost(1))->method('isAdmin')->with('alice')->willReturn(false);
 		$restrictedUserService = $this->createMock(RestrictedUserService::class);
-		$restrictedUserService->method('getPermissionSet')
+		$restrictedUserService->expects(self::atMost(1))->method('getPermissionSet')
 			->with('alice')
 			->willReturn($permissionSet);
 		$l10n = $this->createMock(IL10N::class);
-		$l10n->method('t')
+		$l10n->expects(self::atMost(1))->method('t')
 			->with('This action has been disabled by your administrator.')
 			->willReturn('File changes are disabled.');
 
@@ -184,7 +184,7 @@ class FileMutationRestrictionListenerTest extends TestCase {
 	}
 
 	private function createNode(string $path): Node {
-		$node = $this->createMock(Node::class);
+		$node = $this->createStub(Node::class);
 		$node->method('getPath')->willReturn($path);
 
 		return $node;

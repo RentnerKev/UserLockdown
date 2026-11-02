@@ -29,7 +29,7 @@ class PermissionSettingsApiControllerTest extends TestCase {
 	protected function setUp(): void {
 		parent::setUp();
 
-		$appConfig = $this->createMock(IAppConfig::class);
+		$appConfig = $this->createStub(IAppConfig::class);
 		$appConfig->method('searchKeys')->willReturnCallback(
 			fn (string $app, string $prefix): array => array_values(array_filter(
 				array_keys($this->storedPresets),
@@ -62,18 +62,18 @@ class PermissionSettingsApiControllerTest extends TestCase {
 			},
 		);
 
-		$secureRandom = $this->createMock(ISecureRandom::class);
+		$secureRandom = $this->createStub(ISecureRandom::class);
 		$secureRandom->method('generate')->willReturn('0123456789abcdef');
 		$service = new PermissionSettingsService($appConfig, $secureRandom);
-		$l10n = $this->createMock(IL10N::class);
+		$l10n = $this->createStub(IL10N::class);
 		$l10n->method('t')->willReturnCallback(static fn (string $text): string => $text);
 
 		$this->controller = new PermissionSettingsApiController(
 			'user_lockdown',
-			$this->createMock(IRequest::class),
+			$this->createStub(IRequest::class),
 			$service,
 			$l10n,
-			$this->createMock(LoggerInterface::class),
+			$this->createStub(LoggerInterface::class),
 		);
 	}
 
