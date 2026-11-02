@@ -17,7 +17,7 @@
         "nextcloud/ocp": "^34.0",
         "phpstan/phpstan": "^2.1",
         "phpstan/phpstan-phpunit": "^2.0",
-        "phpunit/phpunit": "^11.5",
+        "phpunit/phpunit": "^13.4",
         "sabre/dav": "^4.7"
     },
     "autoload": {
