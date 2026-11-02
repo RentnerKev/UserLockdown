@@ -1,0 +1,24 @@
+[test]
+root = "./tests/frontend"
+preload = ["./tests/frontend/setup.ts"]
+coverageReporter = ["text", "lcov"]
+coverageSkipTestFiles = true
+coveragePathIgnorePatterns = ["src/main.tsx"]
+
+[fmt]
+printWidth = 100
+tabWidth = 2
+useTabs = false
+semi = false
+singleQuote = true
+trailingComma = "all"
+ignorePatterns = [
+  "**/.env",
+  "**/.env.*",
+  "**/node_modules/**",
+  "**/vendor/**",
+  "**/build/**",
+  "**/coverage/**",
+  "css/**",
+  "js/**",
+]

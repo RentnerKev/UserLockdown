@@ -2,10 +2,26 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, mock, type Mock } from 'bun:test'
 
-import { AdminApp } from '../../src/AdminApp'
-import {
+import type { PermissionPreset, PermissionSet } from '../../src/types/permissions'
+import type { RestrictedUser, SearchUser } from '../../src/types/user'
+
+mock.module('../../src/api/client', () => ({
+  addRestrictedUser: mock(),
+  createPreset: mock(),
+  fetchPermissionSettings: mock(),
+  fetchRestrictedUsers: mock(),
+  removePreset: mock(),
+  removeRestrictedUser: mock(),
+  searchUsers: mock(),
+  updateDefaultPermissions: mock(),
+  updatePreset: mock(),
+  updateRestrictedUser: mock(),
+}))
+
+const { AdminApp } = await import('../../src/AdminApp')
+const {
   addRestrictedUser,
   createPreset,
   fetchPermissionSettings,
@@ -16,22 +32,9 @@ import {
   updateDefaultPermissions,
   updatePreset,
   updateRestrictedUser,
-} from '../../src/api/client'
-import type { PermissionPreset, PermissionSet } from '../../src/types/permissions'
-import type { RestrictedUser, SearchUser } from '../../src/types/user'
+} = await import('../../src/api/client')
 
-vi.mock('../../src/api/client', () => ({
-  addRestrictedUser: vi.fn(),
-  createPreset: vi.fn(),
-  fetchPermissionSettings: vi.fn(),
-  fetchRestrictedUsers: vi.fn(),
-  removePreset: vi.fn(),
-  removeRestrictedUser: vi.fn(),
-  searchUsers: vi.fn(),
-  updateDefaultPermissions: vi.fn(),
-  updatePreset: vi.fn(),
-  updateRestrictedUser: vi.fn(),
-}))
+const mocked = <T extends (...args: never[]) => unknown>(fn: T): T & Mock<T> => fn as T & Mock<T>
 
 const blockedPermissions: PermissionSet = {
   viewFiles: false,
@@ -136,41 +139,41 @@ const renderApp = () =>
 
 describe('User Lockdown admin app', () => {
   beforeEach(() => {
-    vi.mocked(fetchPermissionSettings).mockResolvedValue(permissionSettings)
-    vi.mocked(fetchRestrictedUsers).mockResolvedValue([])
-    vi.mocked(searchUsers).mockResolvedValue([])
-    vi.mocked(addRestrictedUser).mockResolvedValue({
+    mocked(fetchPermissionSettings).mockResolvedValue(permissionSettings)
+    mocked(fetchRestrictedUsers).mockResolvedValue([])
+    mocked(searchUsers).mockResolvedValue([])
+    mocked(addRestrictedUser).mockResolvedValue({
       id: searchableBob.id,
       displayName: searchableBob.displayName,
       avatarUrl: null,
       permissions: readOnlyPermissions,
     })
-    vi.mocked(removeRestrictedUser).mockResolvedValue('alice')
-    vi.mocked(updateRestrictedUser).mockImplementation(async (userId, permissions) => ({
+    mocked(removeRestrictedUser).mockResolvedValue('alice')
+    mocked(updateRestrictedUser).mockImplementation(async (userId, permissions) => ({
       ...restrictedAlice,
       id: userId,
       permissions,
     }))
-    vi.mocked(updateDefaultPermissions).mockImplementation(async (permissions) => ({
+    mocked(updateDefaultPermissions).mockImplementation(async (permissions) => ({
       ...permissionSettings,
       defaultPermissions: permissions,
     }))
-    vi.mocked(createPreset).mockImplementation(async (input) => ({
+    mocked(createPreset).mockImplementation(async (input) => ({
       id: 'custom:new',
       builtIn: false,
       ...input,
     }))
-    vi.mocked(updatePreset).mockImplementation(async (presetId, input) => ({
+    mocked(updatePreset).mockImplementation(async (presetId, input) => ({
       id: presetId,
       builtIn: false,
       ...input,
     }))
-    vi.mocked(removePreset).mockResolvedValue(customPreset.id)
+    mocked(removePreset).mockResolvedValue(customPreset.id)
   })
 
   it('shows a loading state and then the empty state', async () => {
     let resolveUsers: ((users: RestrictedUser[]) => void) | undefined
-    vi.mocked(fetchRestrictedUsers).mockImplementation(
+    mocked(fetchRestrictedUsers).mockImplementation(
       () =>
         new Promise((resolve) => {
           resolveUsers = resolve
@@ -186,7 +189,7 @@ describe('User Lockdown admin app', () => {
   })
 
   it('searches by user input and adds a result with the saved defaults', async () => {
-    vi.mocked(searchUsers).mockResolvedValue([searchableBob])
+    mocked(searchUsers).mockResolvedValue([searchableBob])
     const user = userEvent.setup()
     renderApp()
 
@@ -202,8 +205,8 @@ describe('User Lockdown admin app', () => {
   })
 
   it('marks users that are already restricted', async () => {
-    vi.mocked(fetchRestrictedUsers).mockResolvedValue([restrictedAlice])
-    vi.mocked(searchUsers).mockResolvedValue([
+    mocked(fetchRestrictedUsers).mockResolvedValue([restrictedAlice])
+    mocked(searchUsers).mockResolvedValue([
       { ...searchableBob, id: restrictedAlice.id, displayName: restrictedAlice.displayName },
     ])
     const user = userEvent.setup()
@@ -217,7 +220,7 @@ describe('User Lockdown admin app', () => {
   })
 
   it('requires confirmation before removing a user', async () => {
-    vi.mocked(fetchRestrictedUsers).mockResolvedValue([restrictedAlice])
+    mocked(fetchRestrictedUsers).mockResolvedValue([restrictedAlice])
     const user = userEvent.setup()
     renderApp()
 
@@ -235,7 +238,7 @@ describe('User Lockdown admin app', () => {
   })
 
   it('shows a load error and retries both resources', async () => {
-    vi.mocked(fetchRestrictedUsers)
+    mocked(fetchRestrictedUsers)
       .mockRejectedValueOnce(new Error('Network unavailable'))
       .mockResolvedValueOnce([])
     const user = userEvent.setup()
@@ -250,8 +253,8 @@ describe('User Lockdown admin app', () => {
   })
 
   it('supports arrow-key search navigation and Escape in the remove dialog', async () => {
-    vi.mocked(fetchRestrictedUsers).mockResolvedValue([restrictedAlice])
-    vi.mocked(searchUsers).mockResolvedValue([searchableBob])
+    mocked(fetchRestrictedUsers).mockResolvedValue([restrictedAlice])
+    mocked(searchUsers).mockResolvedValue([searchableBob])
     const user = userEvent.setup()
     renderApp()
 
@@ -332,7 +335,7 @@ describe('User Lockdown admin app', () => {
   })
 
   it('edits a user from a preset and saves a permission snapshot', async () => {
-    vi.mocked(fetchRestrictedUsers).mockResolvedValue([restrictedAlice])
+    mocked(fetchRestrictedUsers).mockResolvedValue([restrictedAlice])
     const user = userEvent.setup()
     renderApp()
 
@@ -355,7 +358,7 @@ describe('User Lockdown admin app', () => {
   })
 
   it('keeps user edits local until save and restores focus after cancel', async () => {
-    vi.mocked(fetchRestrictedUsers).mockResolvedValue([restrictedAlice])
+    mocked(fetchRestrictedUsers).mockResolvedValue([restrictedAlice])
     const user = userEvent.setup()
     renderApp()
 
@@ -373,8 +376,8 @@ describe('User Lockdown admin app', () => {
   })
 
   it('shows update errors inside the user permission dialog', async () => {
-    vi.mocked(fetchRestrictedUsers).mockResolvedValue([restrictedAlice])
-    vi.mocked(updateRestrictedUser).mockRejectedValue(new Error('Save failed'))
+    mocked(fetchRestrictedUsers).mockResolvedValue([restrictedAlice])
+    mocked(updateRestrictedUser).mockRejectedValue(new Error('Save failed'))
     const user = userEvent.setup()
     renderApp()
 
