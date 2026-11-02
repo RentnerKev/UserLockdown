@@ -223,17 +223,13 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 	use OCP\IUserManager;
 	use OCP\IUserSession;
 	use PHPUnit\Framework\Attributes\DataProvider;
-	use PHPUnit\Framework\MockObject\MockObject;
 	use PHPUnit\Framework\TestCase;
 
 	final class RestrictionMiddlewareTest extends TestCase {
-		/** @var IRequest&MockObject */
+		/** @var IRequest&\PHPUnit\Framework\MockObject\Stub */
 		private IRequest $request;
 
-		/** @var IUserManager&MockObject */
-		private IUserManager $userManager;
-
-		/** @var RestrictedUserService&MockObject */
+		/** @var RestrictedUserService&\PHPUnit\Framework\MockObject\Stub */
 		private RestrictedUserService $restrictedUserService;
 
 		public function testOidcSingleLogoutIsAllowedWithoutAllowingOtherOidcActions(): void {
@@ -879,14 +875,16 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 		}
 
 		public function testLostPasswordEmailHidesRestrictedAccountState(): void {
+			$userManager = $this->createMock(IUserManager::class);
+			$user = $this->createStub(IUser::class);
+			$user->method('getUID')->willReturn('alice');
+			$userManager->expects(self::once())->method('get')->with('alice')->willReturn($user);
 			$middleware = $this->createMiddleware(
 				'POST',
 				'/index.php/lostpassword/email',
 				['user' => 'alice'],
+				userManager: $userManager,
 			);
-			$user = $this->createMock(IUser::class);
-			$user->method('getUID')->willReturn('alice');
-			$this->userManager->method('get')->with('alice')->willReturn($user);
 			$controller = new LostController($this->request);
 
 			$response = $this->handleRestriction($middleware, $controller, 'email');
@@ -947,16 +945,18 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 			string $httpMethod,
 			string $controllerMethod,
 		): void {
+			$userManager = $this->createMock(IUserManager::class);
+			$user = $this->createStub(IUser::class);
+			$user->method('getUID')->willReturn('alice');
+			$userManager->expects(self::once())->method('get')
+				->with('Alice.Login')
+				->willReturn($user);
 			$middleware = $this->createMiddleware(
 				$httpMethod,
 				'/index.php/lostpassword/reset/token/Alice.Login',
 				['userId' => 'Alice.Login'],
+				userManager: $userManager,
 			);
-			$user = $this->createMock(IUser::class);
-			$user->method('getUID')->willReturn('alice');
-			$this->userManager->method('get')
-				->with('Alice.Login')
-				->willReturn($user);
 
 			$this->expectException(RestrictedActionException::class);
 			$middleware->beforeController(
@@ -996,9 +996,10 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 			?string $currentUserId = 'alice',
 			?string $rememberedTextUserId = null,
 			?PermissionSet $permissionSet = null,
+			?IUserManager $userManager = null,
 		): RestrictionMiddleware {
 			$permissionSet ??= PermissionSet::readOnly();
-			$this->request = $this->createMock(IRequest::class);
+			$this->request = $this->createStub(IRequest::class);
 			$this->request->method('getMethod')->willReturn($httpMethod);
 			$this->request->method('getRequestUri')->willReturn($requestUri);
 			$this->request->method('getParam')
@@ -1006,7 +1007,7 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 			$this->request->method('getHeader')
 				->willReturnCallback(static fn (string $name): string => $headers[$name] ?? '');
 
-			$urlGenerator = $this->createMock(IURLGenerator::class);
+			$urlGenerator = $this->createStub(IURLGenerator::class);
 			$urlGenerator->method('linkToRoute')
 				->willReturnCallback(static fn (string $route, array $parameters = []): string => match ($route) {
 					'files.view.indexView' => $parameters === ['view' => 'files']
@@ -1017,29 +1018,33 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 					default => throw new \RuntimeException('Unexpected route: ' . $route),
 				});
 
-			$l10n = $this->createMock(IL10N::class);
+			$l10n = $this->createStub(IL10N::class);
 			$l10n->method('t')->willReturnCallback(static fn (string $text): string => $text);
 
-			$this->userManager = $this->createMock(IUserManager::class);
-			$this->restrictedUserService = $this->createMock(RestrictedUserService::class);
+			$userManager ??= $this->createStub(IUserManager::class);
+			$this->restrictedUserService = $this->createStub(RestrictedUserService::class);
 			$this->restrictedUserService->method('getPermissionSet')->willReturn($permissionSet);
 
-			$userSession = $this->createMock(IUserSession::class);
-			$groupManager = $this->createMock(IGroupManager::class);
+			$userSession = $this->createStub(IUserSession::class);
+			$groupManager = $this->createStub(IGroupManager::class);
 			if ($currentUserId === null) {
 				$userSession->method('getUser')->willReturn(null);
 			} else {
-				$currentUser = $this->createMock(IUser::class);
+				$currentUser = $this->createStub(IUser::class);
 				$currentUser->method('getUID')->willReturn($currentUserId);
 				$userSession->method('getUser')->willReturn($currentUser);
-				$groupManager->method('isAdmin')->with($currentUserId)->willReturn(false);
+				$groupManager->method('isAdmin')->willReturnCallback(static function (string $userId) use ($currentUserId): bool {
+					self::assertSame($currentUserId, $userId);
+
+					return false;
+				});
 			}
 			$restrictionContext = new RestrictionContext(
 				$userSession,
 				$groupManager,
 				$this->restrictedUserService,
 			);
-			$appConfig = $this->createMock(IAppConfig::class);
+			$appConfig = $this->createStub(IAppConfig::class);
 			$rememberedTextMarker = $rememberedTextUserId === null
 				? ''
 				: json_encode([
@@ -1047,7 +1052,7 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 					'seenAt' => 1_722_000_000,
 				], JSON_THROW_ON_ERROR);
 			$appConfig->method('getValueString')->willReturn($rememberedTextMarker);
-			$timeFactory = $this->createMock(ITimeFactory::class);
+			$timeFactory = $this->createStub(ITimeFactory::class);
 			$timeFactory->method('getTime')->willReturn(1_722_000_000);
 			$textSessionGuard = new TextSessionGuard($appConfig, $timeFactory);
 
@@ -1055,7 +1060,7 @@ namespace OCA\UserLockdown\Tests\Unit\Middleware {
 				$this->request,
 				$urlGenerator,
 				$l10n,
-				$this->userManager,
+				$userManager,
 				$this->restrictedUserService,
 				$restrictionContext,
 				$textSessionGuard,

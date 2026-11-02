@@ -17,7 +17,7 @@ class PageControllerTest extends TestCase {
 	public function testIndexRendersAdminTemplate(): void {
 		$controller = new PageController(
 			'user_lockdown',
-			$this->createMock(IRequest::class),
+			$this->createStub(IRequest::class),
 		);
 
 		$response = $controller->index();

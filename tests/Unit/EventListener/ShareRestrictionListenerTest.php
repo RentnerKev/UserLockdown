@@ -30,7 +30,7 @@ class ShareRestrictionListenerTest extends TestCase {
 			->with('This action has been disabled by your administrator.')
 			->willReturn('Sharing is disabled.');
 		$listener = new ShareRestrictionListener($context, $l10n);
-		$event = new BeforeShareCreatedEvent($this->createMock(IShare::class));
+		$event = new BeforeShareCreatedEvent($this->createStub(IShare::class));
 
 		$listener->handle($event);
 
@@ -51,7 +51,7 @@ class ShareRestrictionListenerTest extends TestCase {
 		$l10n = $this->createMock(IL10N::class);
 		$l10n->expects(self::never())->method('t');
 		$listener = new ShareRestrictionListener($context, $l10n);
-		$event = new BeforeShareCreatedEvent($this->createMock(IShare::class));
+		$event = new BeforeShareCreatedEvent($this->createStub(IShare::class));
 
 		$listener->handle($event);
 
@@ -62,14 +62,14 @@ class ShareRestrictionListenerTest extends TestCase {
 		string $userId,
 		PermissionSet $permissionSet,
 	): RestrictionContext {
-		$user = $this->createMock(IUser::class);
+		$user = $this->createStub(IUser::class);
 		$user->method('getUID')->willReturn($userId);
-		$userSession = $this->createMock(IUserSession::class);
+		$userSession = $this->createStub(IUserSession::class);
 		$userSession->method('getUser')->willReturn($user);
 		$groupManager = $this->createMock(IGroupManager::class);
-		$groupManager->method('isAdmin')->with($userId)->willReturn(false);
+		$groupManager->expects(self::atMost(1))->method('isAdmin')->with($userId)->willReturn(false);
 		$restrictedUserService = $this->createMock(RestrictedUserService::class);
-		$restrictedUserService->method('getPermissionSet')
+		$restrictedUserService->expects(self::atMost(1))->method('getPermissionSet')
 			->with($userId)
 			->willReturn($permissionSet);
 

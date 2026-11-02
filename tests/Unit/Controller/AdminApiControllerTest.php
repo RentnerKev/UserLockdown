@@ -28,7 +28,7 @@ class AdminApiControllerTest extends TestCase {
 	/** @var RestrictedUserService&MockObject */
 	private RestrictedUserService $service;
 
-	/** @var IUserSession&MockObject */
+	/** @var IUserSession&\PHPUnit\Framework\MockObject\Stub */
 	private IUserSession $userSession;
 
 	/** @var LoggerInterface&MockObject */
@@ -39,17 +39,17 @@ class AdminApiControllerTest extends TestCase {
 	protected function setUp(): void {
 		parent::setUp();
 
-		$request = $this->createMock(IRequest::class);
+		$request = $this->createStub(IRequest::class);
 		$this->service = $this->createMock(RestrictedUserService::class);
-		$this->userSession = $this->createMock(IUserSession::class);
-		$urlGenerator = $this->createMock(IURLGenerator::class);
+		$this->userSession = $this->createStub(IUserSession::class);
+		$urlGenerator = $this->createStub(IURLGenerator::class);
 		$urlGenerator->method('linkToRoute')
 			->willReturnCallback(static fn (string $route, array $parameters): string => sprintf(
 				'/index.php/avatar/%s/%d',
 				$parameters['userId'],
 				$parameters['size'],
 			));
-		$l10n = $this->createMock(IL10N::class);
+		$l10n = $this->createStub(IL10N::class);
 		$l10n->method('t')->willReturnCallback(static fn (string $text): string => $text);
 		$this->logger = $this->createMock(LoggerInterface::class);
 
@@ -65,7 +65,8 @@ class AdminApiControllerTest extends TestCase {
 	}
 
 	public function testIndexReturnsStructuredUsers(): void {
-		$this->service->method('getRestrictedUsers')->willReturn([
+		$this->logger->expects(self::never())->method('error');
+		$this->service->expects(self::once())->method('getRestrictedUsers')->willReturn([
 			[
 				'id' => 'alice',
 				'displayName' => 'Alice Example',
@@ -89,7 +90,7 @@ class AdminApiControllerTest extends TestCase {
 	}
 
 	public function testUnexpectedFailureDoesNotExposeExceptionDetails(): void {
-		$this->service->method('getRestrictedUsers')
+		$this->service->expects(self::once())->method('getRestrictedUsers')
 			->willThrowException(new \RuntimeException('sensitive database details'));
 		$this->logger->expects(self::once())->method('error');
 
@@ -106,6 +107,7 @@ class AdminApiControllerTest extends TestCase {
 	}
 
 	public function testSearchRejectsEmptyQuery(): void {
+		$this->logger->expects(self::never())->method('error');
 		$this->service->expects(self::never())->method('searchUsers');
 
 		$response = $this->controller->search('  ');
@@ -120,6 +122,7 @@ class AdminApiControllerTest extends TestCase {
 	}
 
 	public function testSearchReturnsRestrictedFlag(): void {
+		$this->logger->expects(self::never())->method('error');
 		$this->service->expects(self::once())
 			->method('searchUsers')
 			->with('alice', 20)
@@ -145,13 +148,14 @@ class AdminApiControllerTest extends TestCase {
 	}
 
 	public function testCreateReturnsCreatedUser(): void {
-		$admin = $this->createMock(IUser::class);
+		$this->logger->expects(self::never())->method('error');
+		$admin = $this->createStub(IUser::class);
 		$admin->method('getUID')->willReturn('admin');
 		$this->userSession->method('getUser')->willReturn($admin);
 		$this->service->expects(self::once())
 			->method('addRestrictedUser')
 			->with('alice', 'admin');
-		$this->service->method('getRestrictedUser')->with('alice')->willReturn([
+		$this->service->expects(self::once())->method('getRestrictedUser')->with('alice')->willReturn([
 			'id' => 'alice',
 			'displayName' => 'Alice Example',
 			'permissions' => PermissionSet::readOnly()->toArray(),
@@ -173,10 +177,11 @@ class AdminApiControllerTest extends TestCase {
 	}
 
 	public function testCreateRejectsAdministrator(): void {
-		$admin = $this->createMock(IUser::class);
+		$this->logger->expects(self::never())->method('error');
+		$admin = $this->createStub(IUser::class);
 		$admin->method('getUID')->willReturn('admin');
 		$this->userSession->method('getUser')->willReturn($admin);
-		$this->service->method('addRestrictedUser')
+		$this->service->expects(self::once())->method('addRestrictedUser')
 			->willThrowException(new InvalidArgumentException(RestrictedUserService::ERROR_ADMIN_USER));
 
 		$response = $this->controller->create('second-admin');
@@ -191,6 +196,7 @@ class AdminApiControllerTest extends TestCase {
 	}
 
 	public function testDestroyReturnsRemovedUserId(): void {
+		$this->logger->expects(self::never())->method('error');
 		$this->service->expects(self::once())
 			->method('removeRestrictedUser')
 			->with('alice');
@@ -202,7 +208,8 @@ class AdminApiControllerTest extends TestCase {
 	}
 
 	public function testUpdateReturnsUserWithCanonicalPermissions(): void {
-		$admin = $this->createMock(IUser::class);
+		$this->logger->expects(self::never())->method('error');
+		$admin = $this->createStub(IUser::class);
 		$admin->method('getUID')->willReturn('admin');
 		$this->userSession->method('getUser')->willReturn($admin);
 		$permissions = PermissionSet::fromMask(5);
@@ -213,7 +220,7 @@ class AdminApiControllerTest extends TestCase {
 				self::callback(static fn (PermissionSet $set): bool => $set->toMask() === 5),
 				'admin',
 			);
-		$this->service->method('getRestrictedUser')->with('alice')->willReturn([
+		$this->service->expects(self::once())->method('getRestrictedUser')->with('alice')->willReturn([
 			'id' => 'alice',
 			'displayName' => 'Alice Example',
 			'permissions' => $permissions->toArray(),
@@ -235,6 +242,7 @@ class AdminApiControllerTest extends TestCase {
 	}
 
 	public function testUpdateRejectsDependentPermissionWithoutFileAccess(): void {
+		$this->logger->expects(self::never())->method('error');
 		$this->service->expects(self::never())->method('updatePermissions');
 
 		$response = $this->controller->update('alice', [
@@ -247,10 +255,11 @@ class AdminApiControllerTest extends TestCase {
 	}
 
 	public function testUpdateReturnsNotFoundForUnmanagedUser(): void {
-		$admin = $this->createMock(IUser::class);
+		$this->logger->expects(self::never())->method('error');
+		$admin = $this->createStub(IUser::class);
 		$admin->method('getUID')->willReturn('admin');
 		$this->userSession->method('getUser')->willReturn($admin);
-		$this->service->method('updatePermissions')
+		$this->service->expects(self::once())->method('updatePermissions')
 			->willThrowException(new DomainException(RestrictedUserService::ERROR_NOT_RESTRICTED));
 
 		$response = $this->controller->update('alice', PermissionSet::readOnly()->toArray());

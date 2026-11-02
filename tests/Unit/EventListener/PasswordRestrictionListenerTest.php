@@ -82,15 +82,15 @@ class PasswordRestrictionListenerTest extends TestCase {
 		bool $isAdmin,
 		?PermissionSet $permissionSet,
 	): RestrictionContext {
-		$userSession = $this->createMock(IUserSession::class);
+		$userSession = $this->createStub(IUserSession::class);
 		$userSession->method('getUser')->willReturn($this->createUser($userId));
 		$groupManager = $this->createMock(IGroupManager::class);
-		$groupManager->method('isAdmin')->with($userId)->willReturn($isAdmin);
+		$groupManager->expects(self::atMost(1))->method('isAdmin')->with($userId)->willReturn($isAdmin);
 		$restrictedUserService = $this->createMock(RestrictedUserService::class);
 		if ($isAdmin) {
 			$restrictedUserService->expects(self::never())->method('getPermissionSet');
 		} else {
-			$restrictedUserService->method('getPermissionSet')
+			$restrictedUserService->expects(self::atMost(1))->method('getPermissionSet')
 				->with($userId)
 				->willReturn($permissionSet);
 		}
@@ -99,7 +99,7 @@ class PasswordRestrictionListenerTest extends TestCase {
 	}
 
 	private function createUser(string $userId): IUser {
-		$user = $this->createMock(IUser::class);
+		$user = $this->createStub(IUser::class);
 		$user->method('getUID')->willReturn($userId);
 
 		return $user;

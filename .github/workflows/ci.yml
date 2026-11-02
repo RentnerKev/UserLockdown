@@ -39,7 +39,11 @@ jobs:
         php-version: ['8.2', '8.3', '8.4', '8.5']
         include:
           - php-version: '8.2'
+            phpunit-version: '^11.5'
             ocp-version: '^34.0'
+          - php-version: '8.3'
+            phpunit-version: '^12.5'
+            ocp-version: '^35.0'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -51,13 +55,14 @@ jobs:
           tools: composer:v2
       - run: composer validate --strict
       - name: Install locked PHP dependencies
-        if: ${{ !matrix.ocp-version }}
+        if: ${{ !matrix.phpunit-version }}
         run: composer install --no-interaction --prefer-dist
-      - name: Resolve compatible Nextcloud API for older PHP
-        if: ${{ matrix.ocp-version }}
+      - name: Resolve compatible PHPUnit for older PHP
+        if: ${{ matrix.phpunit-version }}
         env:
+          PHPUNIT_VERSION: ${{ matrix.phpunit-version }}
           NEXTCLOUD_OCP_VERSION: ${{ matrix.ocp-version }}
-        run: composer update "nextcloud/ocp:${NEXTCLOUD_OCP_VERSION}" --with-all-dependencies --no-interaction --prefer-dist
+        run: composer update "phpunit/phpunit:${PHPUNIT_VERSION}" "nextcloud/ocp:${NEXTCLOUD_OCP_VERSION}" --with-all-dependencies --no-interaction --prefer-dist
       - run: composer cs:check
       - run: composer phpstan
       - run: composer test

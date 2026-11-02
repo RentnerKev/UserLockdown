@@ -81,14 +81,14 @@ class LoadRestrictedAssetsListenerTest extends TestCase {
 	}
 
 	private function createContext(PermissionSet $permissionSet): RestrictionContext {
-		$user = $this->createMock(IUser::class);
+		$user = $this->createStub(IUser::class);
 		$user->method('getUID')->willReturn('alice');
-		$userSession = $this->createMock(IUserSession::class);
+		$userSession = $this->createStub(IUserSession::class);
 		$userSession->method('getUser')->willReturn($user);
 		$groupManager = $this->createMock(IGroupManager::class);
-		$groupManager->method('isAdmin')->with('alice')->willReturn(false);
+		$groupManager->expects(self::atMost(1))->method('isAdmin')->with('alice')->willReturn(false);
 		$service = $this->createMock(RestrictedUserService::class);
-		$service->method('getPermissionSet')->with('alice')->willReturn($permissionSet);
+		$service->expects(self::atMost(1))->method('getPermissionSet')->with('alice')->willReturn($permissionSet);
 
 		return new RestrictionContext($userSession, $groupManager, $service);
 	}
