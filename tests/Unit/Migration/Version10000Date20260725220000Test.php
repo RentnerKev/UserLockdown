@@ -9,23 +9,29 @@ declare(strict_types=1);
 
 namespace OCA\UserLockdown\Tests\Unit\Migration;
 
+use Doctrine\DBAL\Schema\Table;
 use OCA\UserLockdown\Migration\Version10000Date20260725220000;
 use OCP\DB\ISchemaWrapper;
-use OCP\DB\Schema\IColumn;
-use OCP\DB\Schema\ITable;
 use OCP\DB\Types;
 use OCP\Migration\IOutput;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use ReflectionMethod;
+use ReflectionNamedType;
 
 class Version10000Date20260725220000Test extends TestCase {
 	public function testCreatesRestrictedUsersTable(): void {
 		$schema = $this->createMock(ISchemaWrapper::class);
-		$table = $this->createMock(ITable::class);
-		$column = $this->createStub(IColumn::class);
+		$table = $this->createTableMock();
+		$columnType = (new ReflectionMethod($table, 'addColumn'))->getReturnType();
+		self::assertInstanceOf(ReflectionNamedType::class, $columnType);
+		/** @var class-string $columnClass */
+		$columnClass = $columnType->getName();
+		$column = $this->createStub($columnClass);
 		$columns = [];
 		$table->expects(self::exactly(4))
 			->method('addColumn')
-			->willReturnCallback(static function (string $name, string $type, array $options) use (&$columns, $column): IColumn {
+			->willReturnCallback(static function (string $name, string $type, array $options) use (&$columns, $column): object {
 				self::assertArrayNotHasKey($name, $columns);
 				$columns[$name] = [$type, $options];
 				return $column;
@@ -85,5 +91,18 @@ class Version10000Date20260725220000Test extends TestCase {
 		);
 
 		self::assertNull($result);
+	}
+
+	private function createTableMock(): MockObject {
+		$tableType = (new ReflectionMethod(ISchemaWrapper::class, 'createTable'))->getReturnType();
+		if ($tableType === null) {
+			// Older OCP versions declare the Doctrine table only in their public PHPDoc.
+			return $this->createMock(Table::class);
+		}
+
+		self::assertInstanceOf(ReflectionNamedType::class, $tableType);
+		/** @var class-string $tableClass */
+		$tableClass = $tableType->getName();
+		return $this->createMock($tableClass);
 	}
 }

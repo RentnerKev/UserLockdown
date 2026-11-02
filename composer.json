@@ -14,7 +14,7 @@
     "require-dev": {
         "doctrine/dbal": "^4.3",
         "nextcloud/coding-standard": "^1.5",
-        "nextcloud/ocp": "^35.0",
+        "nextcloud/ocp": "^34.0 || ^35.0",
         "phpstan/phpstan": "^2.1",
         "phpstan/phpstan-phpunit": "^2.0",
         "phpunit/phpunit": "^11.5",
