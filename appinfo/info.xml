@@ -29,7 +29,7 @@
 	<screenshot>https://raw.githubusercontent.com/RentnerKev/UserLockdown/main/.github/assets/readme/restricted-account-menu-1.1.png</screenshot>
 	<dependencies>
 		<php min-version="8.2" max-version="8.5" />
-		<nextcloud min-version="32" max-version="35" />
+		<nextcloud min-version="32" max-version="999" />
 	</dependencies>
 	<settings>
 		<admin>OCA\UserLockdown\Settings\Admin</admin>

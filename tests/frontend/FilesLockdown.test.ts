@@ -1,8 +1,10 @@
 import { loadState } from '@nextcloud/initial-state'
 import { waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, mock, type Mock } from 'bun:test'
 
 import type { PermissionSet } from '../../src/types/permissions'
+
+const mocked = <T extends (...args: never[]) => unknown>(fn: T): T & Mock<T> => fn as T & Mock<T>
 
 const permissions = (overrides: Partial<PermissionSet> = {}): PermissionSet => ({
   viewFiles: true,
@@ -55,8 +57,9 @@ const renderFilesInterface = () => {
 let stopLockdown: (() => void) | undefined
 
 const startWithPermissions = async (permissionSet: PermissionSet) => {
-  vi.mocked(loadState).mockReturnValue(permissionSet)
-  vi.resetModules()
+  mocked(loadState).mockReturnValue(permissionSet)
+  // Re-run the entrypoint so every test exercises its initial-state bootstrap.
+  delete require.cache[require.resolve('../../src/files-lockdown')]
   const lockdown = await import('../../src/files-lockdown')
 
   if (!document.documentElement.classList.contains('user-lockdown-restricted')) {
@@ -170,7 +173,7 @@ describe('restricted Files interface', () => {
     renderFilesInterface()
     const lockdown = await startWithPermissions(permissions())
     lockdown.stopFilesLockdown()
-    const replace = vi.fn()
+    const replace = mock()
 
     stopLockdown = lockdown.initializeFilesLockdown(permissions({ hideSideNavigation: true }), {
       href: 'https://cloud.example/nextcloud/index.php/apps/files/files?dir=/Documents',
@@ -187,7 +190,7 @@ describe('restricted Files interface', () => {
     renderFilesInterface()
     const lockdown = await startWithPermissions(permissions())
     lockdown.stopFilesLockdown()
-    const replace = vi.fn()
+    const replace = mock()
 
     stopLockdown = lockdown.initializeFilesLockdown(permissions({ hideSideNavigation: true }), {
       href: 'https://cloud.example/apps/files/recent',
@@ -208,7 +211,7 @@ describe('restricted Files interface', () => {
     renderFilesInterface()
     const lockdown = await startWithPermissions(permissions())
     lockdown.stopFilesLockdown()
-    const replace = vi.fn()
+    const replace = mock()
 
     stopLockdown = lockdown.initializeFilesLockdown(permissions({ hideSideNavigation: true }), {
       href: 'https://cloud.example/settings/user/security',

@@ -1,8 +1,23 @@
-import '@testing-library/jest-dom/vitest'
-import { cleanup } from '@testing-library/react'
-import { afterEach, vi } from 'vitest'
+import './dom'
 
-vi.mock('@nextcloud/l10n', () => ({
+import type { TestingLibraryMatchers } from '@testing-library/jest-dom/matchers'
+import { afterEach, expect, mock } from 'bun:test'
+
+// Both libraries must bind to the DOM installed by the preload above.
+const { cleanup } = await import('@testing-library/react')
+const { default: _defaultMatchers, ...matchers } =
+  await import('@testing-library/jest-dom/matchers')
+
+declare module 'bun:test' {
+  interface Matchers<T> extends Omit<
+    TestingLibraryMatchers<ReturnType<typeof expect.stringContaining>, T>,
+    'toBeEmpty'
+  > {}
+}
+
+expect.extend(matchers)
+
+mock.module('@nextcloud/l10n', () => ({
   translate: (
     _app: string,
     message: string,
@@ -14,15 +29,15 @@ vi.mock('@nextcloud/l10n', () => ({
     ),
 }))
 
-vi.mock('@nextcloud/router', () => ({
+mock.module('@nextcloud/router', () => ({
   generateUrl: (path: string) => path,
 }))
 
-vi.mock('@nextcloud/initial-state', () => ({
-  loadState: vi.fn((_app: string, _key: string, fallback: unknown) => fallback),
+mock.module('@nextcloud/initial-state', () => ({
+  loadState: mock((_app: string, _key: string, fallback: unknown) => fallback),
 }))
 
 afterEach(() => {
   cleanup()
-  vi.clearAllMocks()
+  mock.clearAllMocks()
 })

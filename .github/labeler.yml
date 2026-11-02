@@ -6,7 +6,7 @@ frontend:
           - "css/**"
           - "js/**"
           - "vite.config.ts"
-          - "vitest.config.ts"
+          - "bunfig.toml"
           - "tsconfig*.json"
           - "ox*.json"
 
