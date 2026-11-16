@@ -9,16 +9,16 @@
     "packages-dev": [
         {
             "name": "doctrine/dbal",
-            "version": "4.5.0",
+            "version": "4.5.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/doctrine/dbal.git",
-                "reference": "c435cd7ea33e17d2a89288caf994cf3d4549b879"
+                "reference": "b2815456989aa41964ee66d7ab47b7885264acf3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/doctrine/dbal/zipball/c435cd7ea33e17d2a89288caf994cf3d4549b879",
-                "reference": "c435cd7ea33e17d2a89288caf994cf3d4549b879",
+                "url": "https://api.github.com/repos/doctrine/dbal/zipball/b2815456989aa41964ee66d7ab47b7885264acf3",
+                "reference": "b2815456989aa41964ee66d7ab47b7885264acf3",
                 "shasum": ""
             },
             "require": {
@@ -31,7 +31,7 @@
                 "doctrine/coding-standard": "14.0.0",
                 "fig/log-test": "^1",
                 "jetbrains/phpstorm-stubs": "2023.2",
-                "phpstan/phpstan": "2.1.30",
+                "phpstan/phpstan": "2.3.4",
                 "phpstan/phpstan-phpunit": "2.0.7",
                 "phpstan/phpstan-strict-rules": "^2",
                 "phpunit/phpunit": "11.5.56",
@@ -95,7 +95,7 @@
             ],
             "support": {
                 "issues": "https://github.com/doctrine/dbal/issues",
-                "source": "https://github.com/doctrine/dbal/tree/4.5.0"
+                "source": "https://github.com/doctrine/dbal/tree/4.5.1"
             },
             "funding": [
                 {
@@ -111,24 +111,24 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-09-24T16:11:26+00:00"
+            "time": "2026-11-10T09:21:59+00:00"
         },
         {
             "name": "doctrine/deprecations",
-            "version": "1.1.6",
+            "version": "1.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/doctrine/deprecations.git",
-                "reference": "d4fe3e6fd9bb9e72557a19674f44d8ac7db4c6ca"
+                "reference": "d2e16653a734c8784c1851ad68b02f997b53ca82"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/doctrine/deprecations/zipball/d4fe3e6fd9bb9e72557a19674f44d8ac7db4c6ca",
-                "reference": "d4fe3e6fd9bb9e72557a19674f44d8ac7db4c6ca",
+                "url": "https://api.github.com/repos/doctrine/deprecations/zipball/d2e16653a734c8784c1851ad68b02f997b53ca82",
+                "reference": "d2e16653a734c8784c1851ad68b02f997b53ca82",
                 "shasum": ""
             },
             "require": {
-                "php": "^7.1 || ^8.0"
+                "php": "^7.4 || ^8.0"
             },
             "conflict": {
                 "phpunit/phpunit": "<=7.5 || >=14"
@@ -157,9 +157,9 @@
             "homepage": "https://www.doctrine-project.org/",
             "support": {
                 "issues": "https://github.com/doctrine/deprecations/issues",
-                "source": "https://github.com/doctrine/deprecations/tree/1.1.6"
+                "source": "https://github.com/doctrine/deprecations/tree/1.2.0"
             },
-            "time": "2026-02-07T07:09:04+00:00"
+            "time": "2026-11-11T10:04:49+00:00"
         },
         {
             "name": "kubawerlos/php-cs-fixer-custom-fixers",
@@ -320,16 +320,16 @@
         },
         {
             "name": "nextcloud/ocp",
-            "version": "v35.0.2",
+            "version": "v35.0.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nextcloud-deps/ocp.git",
-                "reference": "1f372f9d20bc38860d1d11a55c1c16293b759e6c"
+                "reference": "a7babe4273fc6e5c7359e92843ef2613b7555f76"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nextcloud-deps/ocp/zipball/1f372f9d20bc38860d1d11a55c1c16293b759e6c",
-                "reference": "1f372f9d20bc38860d1d11a55c1c16293b759e6c",
+                "url": "https://api.github.com/repos/nextcloud-deps/ocp/zipball/a7babe4273fc6e5c7359e92843ef2613b7555f76",
+                "reference": "a7babe4273fc6e5c7359e92843ef2613b7555f76",
                 "shasum": ""
             },
             "require": {
@@ -367,9 +367,9 @@
             "description": "Composer package containing Nextcloud's public OCP API and the unstable NCU API",
             "support": {
                 "issues": "https://github.com/nextcloud-deps/ocp/issues",
-                "source": "https://github.com/nextcloud-deps/ocp/tree/v35.0.2"
+                "source": "https://github.com/nextcloud-deps/ocp/tree/v35.0.3"
             },
-            "time": "2026-10-09T03:32:50+00:00"
+            "time": "2026-11-06T04:03:15+00:00"
         },
         {
             "name": "nikic/php-parser",
@@ -606,11 +606,11 @@
         },
         {
             "name": "phpstan/phpstan",
-            "version": "2.3.5",
+            "version": "2.3.6",
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/645a1bd6bead15fc1b8474137467961d0fa30a79",
-                "reference": "645a1bd6bead15fc1b8474137467961d0fa30a79",
+                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/00cedebb76cc82c1592414fa4f616cefdccda16f",
+                "reference": "00cedebb76cc82c1592414fa4f616cefdccda16f",
                 "shasum": ""
             },
             "require": {
@@ -666,20 +666,20 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-11-03T12:14:22+00:00"
+            "time": "2026-11-15T19:58:26+00:00"
         },
         {
             "name": "phpstan/phpstan-phpunit",
-            "version": "2.1.1",
+            "version": "2.1.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/phpstan/phpstan-phpunit.git",
-                "reference": "8d16b8478e523a47f8c02e83bce8981b5b5a3b03"
+                "reference": "ffff35d4f96c4642d7f41a3515d90afa0f58be62"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpstan-phpunit/zipball/8d16b8478e523a47f8c02e83bce8981b5b5a3b03",
-                "reference": "8d16b8478e523a47f8c02e83bce8981b5b5a3b03",
+                "url": "https://api.github.com/repos/phpstan/phpstan-phpunit/zipball/ffff35d4f96c4642d7f41a3515d90afa0f58be62",
+                "reference": "ffff35d4f96c4642d7f41a3515d90afa0f58be62",
                 "shasum": ""
             },
             "require": {
@@ -722,9 +722,9 @@
             ],
             "support": {
                 "issues": "https://github.com/phpstan/phpstan-phpunit/issues",
-                "source": "https://github.com/phpstan/phpstan-phpunit/tree/2.1.1"
+                "source": "https://github.com/phpstan/phpstan-phpunit/tree/2.1.2"
             },
-            "time": "2026-10-06T18:12:32+00:00"
+            "time": "2026-11-12T15:27:53+00:00"
         },
         {
             "name": "phpunit/php-code-coverage",
@@ -3325,16 +3325,16 @@
         },
         {
             "name": "symfony/polyfill-php85",
-            "version": "v1.43.0",
+            "version": "v1.44.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/polyfill-php85.git",
-                "reference": "86a42cbcc07adc331481a5ab310a4024bfc227f6"
+                "reference": "94c794cb5ba51784bc259f11e9f128593297d8dc"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/polyfill-php85/zipball/86a42cbcc07adc331481a5ab310a4024bfc227f6",
-                "reference": "86a42cbcc07adc331481a5ab310a4024bfc227f6",
+                "url": "https://api.github.com/repos/symfony/polyfill-php85/zipball/94c794cb5ba51784bc259f11e9f128593297d8dc",
+                "reference": "94c794cb5ba51784bc259f11e9f128593297d8dc",
                 "shasum": ""
             },
             "require": {
@@ -3381,7 +3381,7 @@
                 "shim"
             ],
             "support": {
-                "source": "https://github.com/symfony/polyfill-php85/tree/v1.43.0"
+                "source": "https://github.com/symfony/polyfill-php85/tree/v1.44.0"
             },
             "funding": [
                 {
@@ -3401,7 +3401,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-09-25T15:46:47+00:00"
+            "time": "2026-10-30T15:20:09+00:00"
         },
         {
             "name": "symfony/polyfill-php86",
